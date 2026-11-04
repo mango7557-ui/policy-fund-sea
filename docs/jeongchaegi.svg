@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" fill="none">
+  <defs>
+    <!-- 배경 광채 -->
+    <radialGradient id="bgGlow" cx="50%" cy="48%" r="50%">
+      <stop offset="0%" stop-color="#DBEAFE" stop-opacity="0.95" />
+      <stop offset="65%" stop-color="#EFF6FF" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#DBEAFE" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- 3D 문서 몸통 그라데이션 -->
+    <linearGradient id="docBody" x1="100" y1="60" x2="255" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="60%" stop-color="#F1F7FE" />
+      <stop offset="100%" stop-color="#D8E8FA" />
+    </linearGradient>
+
+    <!-- 문서 좌측 3D 두께 입체면 -->
+    <linearGradient id="docSide" x1="95" y1="70" x2="122" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E2EEFD" />
+      <stop offset="100%" stop-color="#BFD7F6" />
+    </linearGradient>
+
+    <!-- 접힌 모서리 그라데이션 -->
+    <linearGradient id="foldGrad" x1="215" y1="64" x2="252" y2="105" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E0EEFF" />
+      <stop offset="100%" stop-color="#B8D4F8" />
+    </linearGradient>
+
+    <!-- 팔다리 코발트 블루 3D 그라데이션 -->
+    <linearGradient id="limbBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6" />
+      <stop offset="55%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#1D4ED8" />
+    </linearGradient>
+
+    <!-- 눈동자 깊이감 그라데이션 -->
+    <radialGradient id="eyeIris" cx="45%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="65%" stop-color="#1E293B" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </radialGradient>
+
+    <!-- 3D 말풍선 그라데이션 -->
+    <radialGradient id="bubbleGrad" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#93C5FD" />
+      <stop offset="55%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#2563EB" />
+    </radialGradient>
+
+    <!-- 부드러운 그림자 필터 -->
+    <filter id="softShadow" x="-15%" y="-15%" width="130%" height="135%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#1E3A8A" flood-opacity="0.16" />
+    </filter>
+    <filter id="bubbleGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#2563EB" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- 배경 소프트 글로우 & 보케 -->
+  <circle cx="180" cy="180" r="165" fill="url(#bgGlow)" />
+  <circle cx="52" cy="74" r="14" fill="#FFFFFF" fill-opacity="0.65" />
+  <circle cx="315" cy="86" r="10" fill="#FFFFFF" fill-opacity="0.6" />
+  <circle cx="72" cy="295" r="16" fill="#FFFFFF" fill-opacity="0.55" />
+  <circle cx="295" cy="275" r="12" fill="#FFFFFF" fill-opacity="0.55" />
+
+  <!-- 바닥 그림자 -->
+  <ellipse cx="180" cy="316" rx="76" ry="12" fill="#93C5FD" fill-opacity="0.45" />
+
+  <!-- ================= 오른팔 (반갑게 손 흔드는 포즈) ================= -->
+  <g filter="url(#softShadow)">
+    <path d="M108 188 C84 185, 72 165, 68 140" stroke="url(#limbBlue)" stroke-width="18" stroke-linecap="round" fill="none" />
+    <!-- 손바닥 및 손가락 -->
+    <circle cx="67" cy="133" r="12" fill="url(#limbBlue)" />
+    <path d="M56 130 L48 117" stroke="url(#limbBlue)" stroke-width="6.5" stroke-linecap="round" />
+    <path d="M62 124 L59 108" stroke="url(#limbBlue)" stroke-width="6.5" stroke-linecap="round" />
+    <path d="M70 124 L71 108" stroke="url(#limbBlue)" stroke-width="6.5" stroke-linecap="round" />
+    <path d="M77 128 L83 116" stroke="url(#limbBlue)" stroke-width="6.5" stroke-linecap="round" />
+  </g>
+
+  <!-- ================= 왼팔 (말풍선을 받치고 있는 포즈) ================= -->
+  <g filter="url(#softShadow)">
+    <path d="M244 190 C265 198, 280 192, 294 176" stroke="url(#limbBlue)" stroke-width="17" stroke-linecap="round" fill="none" />
+    <ellipse cx="299" cy="172" rx="11" ry="8" transform="rotate(-20 299 172)" fill="url(#limbBlue)" />
+    <path d="M292 168 L286 160" stroke="url(#limbBlue)" stroke-width="6" stroke-linecap="round" />
+    <path d="M303 169 L312 163" stroke="url(#limbBlue)" stroke-width="6" stroke-linecap="round" />
+  </g>
+
+  <!-- ================= 다리 & 파란 스니커즈 신발 ================= -->
+  <g filter="url(#softShadow)">
+    <!-- 왼쪽 다리 -->
+    <rect x="144" y="246" width="18" height="44" rx="9" fill="url(#limbBlue)" />
+    <!-- 오른쪽 다리 -->
+    <rect x="196" y="246" width="18" height="44" rx="9" fill="url(#limbBlue)" />
+
+    <!-- 왼쪽 신발 -->
+    <path d="M132 292 C132 280, 168 280, 168 292 L170 305 C170 309, 130 309, 130 305 Z" fill="url(#limbBlue)" />
+    <rect x="129" y="302" width="42" height="8" rx="4" fill="#E2E8F0" />
+    <path d="M144 287 L156 287" stroke="#93C5FD" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- 오른쪽 신발 -->
+    <path d="M190 292 C190 280, 226 280, 226 292 L228 305 C228 309, 188 309, 188 305 Z" fill="url(#limbBlue)" />
+    <rect x="187" y="302" width="42" height="8" rx="4" fill="#E2E8F0" />
+    <path d="M202 287 L214 287" stroke="#93C5FD" stroke-width="2.5" stroke-linecap="round" />
+  </g>
+
+  <!-- ================= 3D 공문서 몸통 (정책이) ================= -->
+  <g filter="url(#softShadow)">
+    <!-- 좌측 입체 두께면 -->
+    <path d="M112 64 C101 64, 96 72, 96 84 L96 236 C96 248, 103 256, 115 256 L128 256 L128 64 Z" fill="url(#docSide)" />
+
+    <!-- 정면 문서 바디 (우상단 접힌 형태) -->
+    <path d="M122 62 L212 62 C218 62, 223 65, 227 69 L249 91 C253 95, 256 100, 256 106 L256 238 C256 250, 246 258, 234 258 L122 258 C110 258, 104 250, 104 238 L104 82 C104 70, 110 62, 122 62 Z" fill="url(#docBody)" />
+
+    <!-- 우상단 접힌 귀퉁이 (Page Fold) -->
+    <path d="M214 62 L214 90 C214 98, 220 104, 228 104 L256 104 Z" fill="url(#foldGrad)" />
+    <path d="M214 62 L214 90 C214 98, 220 104, 228 104 L256 104" stroke="#93C5FD" stroke-width="1.5" stroke-opacity="0.6" />
+  </g>
+
+  <!-- ================= 얼굴 (눈썹 · 눈 · 미소) ================= -->
+  <!-- 눈썹 -->
+  <path d="M143 119 C149 114, 159 114, 165 118" stroke="#60A5FA" stroke-width="5.5" stroke-linecap="round" />
+  <path d="M197 118 C203 114, 213 114, 219 119" stroke="#60A5FA" stroke-width="5.5" stroke-linecap="round" />
+
+  <!-- 왼쪽 눈 -->
+  <circle cx="155" cy="144" r="19" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5" />
+  <circle cx="156" cy="144" r="13.5" fill="url(#eyeIris)" />
+  <circle cx="151" cy="139" r="4.2" fill="#FFFFFF" />
+  <circle cx="161" cy="149" r="2" fill="#93C5FD" fill-opacity="0.8" />
+
+  <!-- 오른쪽 눈 -->
+  <circle cx="207" cy="144" r="19" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5" />
+  <circle cx="206" cy="144" r="13.5" fill="url(#eyeIris)" />
+  <circle cx="201" cy="139" r="4.2" fill="#FFFFFF" />
+  <circle cx="211" cy="149" r="2" fill="#93C5FD" fill-opacity="0.8" />
+
+  <!-- 귀엽고 다정한 미소 입 -->
+  <path d="M171 169 Q181 178 191 169" stroke="#7C2D12" stroke-width="3.5" stroke-linecap="round" fill="none" />
+  <path d="M173 170 Q181 176 189 170" stroke="#F87171" stroke-width="1.8" stroke-linecap="round" fill="none" />
+
+  <!-- ================= 우측 하단 대한민국 정책인증 태극 스탬프 ================= -->
+  <g transform="translate(212, 212)">
+    <circle cx="0" cy="0" r="24" fill="#EFF6FF" stroke="#2563EB" stroke-width="2" />
+    <circle cx="0" cy="0" r="19" fill="none" stroke="#3B82F6" stroke-width="1" stroke-dasharray="3 2" />
+    <!-- 태극 문양 -->
+    <circle cx="0" cy="0" r="9.5" fill="#1D4ED8" />
+    <path d="M -9.5 0 A 9.5 9.5 0 0 1 9.5 0 A 4.75 4.75 0 0 1 0 0 A 4.75 4.75 0 0 0 -9.5 0 Z" fill="#EF4444" />
+    <!-- 스탬프 장식 텍스트 도트 -->
+    <circle cx="-13" cy="-8" r="1.2" fill="#2563EB" />
+    <circle cx="13" cy="-8" r="1.2" fill="#2563EB" />
+    <circle cx="-13" cy="8" r="1.2" fill="#2563EB" />
+    <circle cx="13" cy="8" r="1.2" fill="#2563EB" />
+  </g>
+
+  <!-- ================= 왼손 위 3D 반짝이 AI 말풍선 ================= -->
+  <g filter="url(#bubbleGlow)">
+    <rect x="268" y="106" width="60" height="44" rx="20" fill="url(#bubbleGrad)" />
+    <path d="M282 148 L275 159 L293 149 Z" fill="#2563EB" />
+    <!-- 큰 반짝이 별(✦) -->
+    <path d="M295 115 L298.5 124.5 L308 128 L298.5 131.5 L295 141 L291.5 131.5 L282 128 L291.5 124.5 Z" fill="#FFFFFF" />
+    <!-- 작은 반짝이 별 -->
+    <path d="M312 114 L313.5 118 L317.5 119.5 L313.5 121 L312 125 L310.5 121 L306.5 119.5 L310.5 118 Z" fill="#E0F2FE" />
+  </g>
+</svg>

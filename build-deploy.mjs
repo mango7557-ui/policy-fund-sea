@@ -2,6 +2,7 @@ import { build } from "esbuild";
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 
 await mkdir("dist", { recursive: true });
+await mkdir("docs", { recursive: true });
 
 const result = await build({
   entryPoints: ["src/preview.tsx"],
@@ -28,10 +29,14 @@ const css = (await readFile("src/app/globals.css", "utf8")).replace(
 );
 const themeInit = `(function(){try{var t=localStorage.getItem('fundsea-theme');document.documentElement.dataset.theme=t==='light'||t==='dark'?t:'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();`;
 
-await writeFile(
-  "dist/index.html",
-  `<!doctype html><html lang="ko" data-theme="dark"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>정책 자금바다 · 정책이와 함께하는 AI 정책자금 진단</title><script>${themeInit}</script><style>${css}</style></head><body><div id="root"></div><script src="./app.js"></script></body></html>`
-);
+const htmlContent = `<!doctype html><html lang="ko" data-theme="dark"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>정책 자금바다 · 정책이와 함께하는 AI 정책자금 진단</title><script>${themeInit}</script><style>${css}</style></head><body><div id="root"></div><script src="./app.js"></script></body></html>`;
+
+await writeFile("dist/index.html", htmlContent);
 await writeFile("dist/.nojekyll", "");
 
-console.log("Built static bundle in dist/ for Firebase Hosting & GitHub Pages");
+await writeFile("docs/app.js", js);
+await cp("public", "docs", { recursive: true });
+await writeFile("docs/index.html", htmlContent);
+await writeFile("docs/.nojekyll", "");
+
+console.log("Built static bundle in dist/ (Firebase Hosting) & docs/ (GitHub Pages)");
