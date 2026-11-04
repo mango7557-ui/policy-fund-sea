@@ -373,12 +373,10 @@ export default function FundSeaExperience() {
       )
     ) {
       return {
-        text: `네, 안녕하세요 대표님! 무엇을 도와드릴까요?\n\n${formatHumanFollowUpQuestion(
-          currentAnswers
-        )}`,
+        text: `네, 안녕하세요 대표님! 반갑습니다 😊\n\n무엇을 도와드릴까요? 요즘 사업하시면서 자금 쪽으로 어떤 고민이 있으신지 편하게 말씀해 주세요~`,
         source: aiEngine === "ollama" ? `Ollama (${ollamaModel})` : `Gemini (${geminiModel})`,
         links: [],
-        isGreeting: false,
+        isGreeting: true,
       };
     }
 
@@ -892,10 +890,8 @@ export default function FundSeaExperience() {
                   </div>
                 )}
               </div>
-              {diagnosisStarted && question && !busy && (
+              {messages.length > 0 && question && !busy && (
                 <div className="nbq-panel">
-                  <small>빠른 답변 선택 · 직접 입력하셔도 돼요</small>
-                  <strong>{question.text}</strong>
                   <div>
                     {question.choices.map((choice) => (
                       <button
@@ -904,7 +900,7 @@ export default function FundSeaExperience() {
                           chooseAnswer(question.key, choice.value, choice.label)
                         }
                       >
-                        {choice.label}
+                        💬 {choice.label}
                       </button>
                     ))}
                   </div>
