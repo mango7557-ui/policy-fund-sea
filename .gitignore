@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+/.pnp
+.pnp.*
+
+# next.js
+.next/
+out/
+dist/
+
+# testing / temp screenshots
+coverage/
+design-*.png
+*.log
+.firebase/
+
+# local env files (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# misc
+.DS_Store
+*.pem
+tsconfig.tsbuildinfo
+next-env.d.ts

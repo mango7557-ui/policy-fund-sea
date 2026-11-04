@@ -1,0 +1,69 @@
+[
+  {
+    "id": "uat",
+    "file": "UAT검수 시나리오_2026-11-01.docx",
+    "sha256": "4d3b4952c781e5052bec20f688b05256f8359ba0d35dbfdf46bd0fcaf41dcf21",
+    "referenceDate": "2026-11-01",
+    "status": "USER_SUPPLIED_REFERENCE",
+    "count": 266
+  },
+  {
+    "id": "questions",
+    "file": "정책자금 질문은행 100선_2026-11-01.xlsx",
+    "sha256": "286ce2d11a04ae8e52dd5b6f019b608d262a052efa2be04b9f0fdd7fda44c8ee",
+    "referenceDate": "2026-11-01",
+    "status": "USER_SUPPLIED_REFERENCE",
+    "count": {
+      "Q&A_1000": 1001,
+      "Coverage_Summary": 23,
+      "Taxonomy": 13,
+      "Source_Notes": 8
+    }
+  },
+  {
+    "id": "platform",
+    "file": "정책자금 플랫폼 개발자료_2026-11-01.docx",
+    "sha256": "e7af816396fea595e0febcf2abffda41246bdbb4018a6a5389372240a1c39b34",
+    "referenceDate": "2026-11-01",
+    "status": "USER_SUPPLIED_REFERENCE",
+    "count": 1788
+  },
+  {
+    "id": "rules",
+    "file": "룰기관별 최신정책_DB_2026-11-01.xlsx",
+    "sha256": "c32380f8b7235a3f76dc3849ee96d7c9fcefdf3f211804a7053260db4878932c",
+    "referenceDate": "2026-11-01",
+    "status": "USER_SUPPLIED_REFERENCE",
+    "count": {
+      "Institution_Rule_Index": 19,
+      "Preferential_Factors": 16,
+      "Notice_Versions": 8,
+      "Rule_Field_Definitions": 20,
+      "Update_Operation": 8
+    }
+  },
+  {
+    "id": "collection",
+    "file": "굥공데이터 수집안_2026-11-01.docx",
+    "sha256": "ea71543573d35a8853a2cf814638518f852054a8052cdd3c09e92ceb18d41cb4",
+    "referenceDate": "2026-11-01",
+    "status": "USER_SUPPLIED_REFERENCE",
+    "count": 96
+  },
+  {
+    "id": "sample-five",
+    "file": "가격대별 테스트 샘플5선 _2026-11-01.docx",
+    "sha256": "a73f6fd50c24e3968d5e9a586f0f2c0429e57f169fe7a71bcd07600e0a4ea48e",
+    "referenceDate": "2026-11-01",
+    "status": "USER_SUPPLIED_REFERENCE",
+    "count": 143
+  },
+  {
+    "id": "sample-tiers",
+    "file": "가격대별 샘플_2026-11-01.docx",
+    "sha256": "7d218c7b0e2b8e7f10427acf295b97e2ac618605347ef03c06057e5193d52e81",
+    "referenceDate": "2026-11-01",
+    "status": "USER_SUPPLIED_REFERENCE",
+    "count": 215
+  }
+]

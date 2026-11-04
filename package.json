@@ -1,0 +1,32 @@
+{
+  "name": "policy-fund-sea",
+  "version": "1.0.0",
+  "private": true,
+  "description": "정책 자금바다 - AI 기반 맞춤형 정책자금 진단 및 조달 경로 추천 웹앱",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:gt100": "vitest run src/tests/gt100.test.ts",
+    "build:preview": "node build-preview.mjs",
+    "build:deploy": "node build-deploy.mjs",
+    "deploy:firebase": "node build-deploy.mjs && npx firebase-tools deploy --only hosting"
+  },
+  "dependencies": {
+    "lucide-react": "^1.16.0",
+    "next": "^15.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
+  }
+}
