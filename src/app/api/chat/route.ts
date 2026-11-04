@@ -17,6 +17,43 @@ import {
   summarizeKnownFacts,
 } from "../../../engines/document-advisor";
 import { containsForbiddenCompliancePhrase } from "../../../engines/diagnostic-engine";
+import {
+  buildEvolutionPromptContext,
+  evolveFromUserMessage,
+  INITIAL_EVOLUTION_STATE,
+  JeongchaegiEvolutionState,
+} from "../../../engines/self-learning";
+
+const LEARNED_MEMORY_FILE = path.join(
+  process.cwd(),
+  "src",
+  "data",
+  "learned-memory.json"
+);
+
+function loadServerEvolutionState(): JeongchaegiEvolutionState {
+  try {
+    if (fs.existsSync(LEARNED_MEMORY_FILE)) {
+      return JSON.parse(fs.readFileSync(LEARNED_MEMORY_FILE, "utf8"));
+    }
+  } catch {
+    // Ignore read error
+  }
+  return INITIAL_EVOLUTION_STATE;
+}
+
+function saveServerEvolutionState(state: JeongchaegiEvolutionState): void {
+  try {
+    fs.mkdirSync(path.dirname(LEARNED_MEMORY_FILE), { recursive: true });
+    fs.writeFileSync(
+      LEARNED_MEMORY_FILE,
+      JSON.stringify(state, null, 2),
+      "utf8"
+    );
+  } catch {
+    // Ignore write error in read-only environments
+  }
+}
 
 interface ChatTurn {
   role: "user" | "assistant";
@@ -284,7 +321,18 @@ export async function POST(req: NextRequest) {
       return jsonWithCors({ error: "질문 내용을 입력해 주세요." }, 400);
     }
 
-    // 가벼운 인사말("안녕하세요", "반갑습니다", "계세요?" 등)은 진짜 사람처럼 즉시 짧고 다정하게 인사 응답
+    // 정책이 자가학습·진화 업데이트
+    const baseEvoState: JeongchaegiEvolutionState =
+      body?.evolutionState && typeof body.evolutionState === "object"
+        ? body.evolutionState
+        : loadServerEvolutionState();
+    const { nextState: evolvedState, newlyLearned } = evolveFromUserMessage(
+      baseEvoState,
+      message
+    );
+    saveServerEvolutionState(evolvedState);
+
+    // 가벼운 인사말("안녕하세요", "반갑습니다", "계세요?" 등)은 진짜 사람처럼 한 말풍선으로 다정하게 인사 응답
     const compactMsg = message.replace(/[!?.~,\s]/g, "");
     const isCasualGreeting =
       /^(안녕하세요|안녕|반갑습니다|반가워요|여보세요|계세요|저기요|하이|선생님|상담사님|정책이님|정책아)$/.test(
@@ -293,12 +341,14 @@ export async function POST(req: NextRequest) {
 
     if (isCasualGreeting) {
       return jsonWithCors({
-        text: `네, 안녕하세요 대표님! 반갑습니다 😊\n\n무엇을 도와드릴까요? 요즘 사업하시면서 자금 쪽으로 어떤 고민이 있으신지 편하게 말씀해 주세요~`,
+        text: `네, 안녕하세요 대표님! 반갑습니다 😊 무엇을 도와드릴까요? 요즘 사업하시면서 자금 쪽으로 어떤 고민이 있으신지 편하게 말씀해 주세요~`,
         source: preferredEngine === "ollama" ? `Ollama (${OLLAMA_MODEL})` : "Gemini",
         coreId: null,
         links: [],
         isGreeting: true,
         updatedAnswers: answers,
+        evolutionState: evolvedState,
+        newlyLearned,
         provider: preferredEngine,
       });
     }
@@ -336,7 +386,9 @@ export async function POST(req: NextRequest) {
         : "1. 이미 대화가 진행 중이니 '안녕하세요', '정책이입니다' 같은 인사는 절대 반복하지 말고 바로 대표님 말씀에 따뜻하게 맞장구치세요.",
       "2. 너무 직선적이거나 사무적인 말투('~를 알려주세요', '~를 확인해야 합니다', '검토가 가능합니다') 대신, 사람 냄새 나는 부드러운 구어체('아, 그러셨군요!', '그 부분 때문에 마음고생 꽤 하셨겠어요', '~보시면 훨씬 수월하실 거예요', '혹시 ~는 어떠세요?')로 말씀하세요.",
       "3. 번호 매기기(1., 2.), 불릿 기호(-, •), 굵은 글씨(**)는 절대 쓰지 마세요.",
-      "4. 첫 번째 문단(2~3문장)에서는 대표님 상황에 진심으로 공감하고 핵심 조언을 쉽게 풀어드린 뒤, 빈 줄(\\n\\n)을 하나 넣고 두 번째 문단(1문장)에서 대화가 자연스럽게 이어지도록 부드러운 질문을 하나 건네세요.",
+      "4. 문단을 2개로 쪼개지 말고, 하나의 자연스러운 말풍선(3~4문장) 안에서 대표님 상황에 먼저 진심으로 공감하고 핵심 조언을 쉽게 풀어드린 뒤, 마지막 문장에서 대화가 이어지도록 부드러운 질문을 하나 건네세요. ('아, 그러시군요!' 같은 추임새를 문장 중간에 중복해서 쓰지 마세요.)",
+      "",
+      buildEvolutionPromptContext(evolvedState),
       "",
       "[전문가로서 지켜야 할 사실 원칙]",
       "- '90% 승인', '무조건 승인', '확정 금액' 같은 단정 표현은 쓰지 마세요.",
@@ -378,6 +430,8 @@ export async function POST(req: NextRequest) {
             coreId: fallback.coreId,
             links: fallback.references,
             updatedAnswers: answers,
+            evolutionState: evolvedState,
+            newlyLearned,
             provider: "ollama",
             model: ollamaStatus.model,
           });
@@ -407,6 +461,8 @@ export async function POST(req: NextRequest) {
           coreId: fallback.coreId,
           links: fallback.references,
           updatedAnswers: answers,
+          evolutionState: evolvedState,
+          newlyLearned,
           provider: "gemini",
           model: gemini.model,
         });
@@ -434,6 +490,8 @@ export async function POST(req: NextRequest) {
             coreId: fallback.coreId,
             links: fallback.references,
             updatedAnswers: answers,
+            evolutionState: evolvedState,
+            newlyLearned,
             provider: "ollama",
             model: ollamaStatus.model,
           });
@@ -447,6 +505,8 @@ export async function POST(req: NextRequest) {
       coreId: fallback.coreId,
       links: fallback.references,
       updatedAnswers: answers,
+      evolutionState: evolvedState,
+      newlyLearned,
       provider: "rule-fallback",
     });
   } catch {

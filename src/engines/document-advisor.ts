@@ -243,15 +243,15 @@ export function formatHumanFollowUpQuestion(currentAnswers: Answers = {}): strin
   }
   switch (upcoming.key) {
     case "purpose":
-      return "요즘 어떤 자금이 제일 절실하세요? 당장 돌아가는 운영비·인건비 때문이신지, 아니면 기계나 매장을 늘리시려는 건지 편하게 들려주세요 😊";
+      return "요즘 어떤 자금이 제일 절실하세요? 당장 돌아가는 운영비·인건비 때문이신지, 아니면 기계나 매장을 늘리시려는 건지 편하게 들려주세요.";
     case "entity":
-      return "아, 그러시군요! 실례지만 지금 사업자는 개인사업자로 내고 계세요, 아니면 법인으로 운영 중이세요?";
+      return "혹시 지금 사업자는 개인사업자로 내고 계세요, 아니면 법인으로 운영 중이세요?";
     case "operation":
-      return "지금 사업장은 계속 문 열고 영업 중이신 거죠? 시작하신 지는 대략 몇 년 정도 되셨어요?";
+      return "지금 사업장은 계속 문 열고 영업 중이신지와 시작하신 지 대략 몇 년 정도 되셨는지도 편하게 알려주세요.";
     case "tax":
-      return "조심스러운 질문이지만, 혹시 국세나 지방세 중에 잠깐 밀려 있는 게 있으실까요? 분납 중이셔도 방법이 있으니 편하게 말씀해 주셔도 돼요.";
+      return "혹시 국세나 지방세 중에 잠깐 밀려 있는 게 있으실까요? 분납 중이셔도 방법이 있으니 편하게 말씀해 주셔도 돼요.";
     case "overdue":
-      return "다행이에요! 그럼 은행이나 카드 값, 보증기관 쪽에 연체 걸려 있는 것도 없으시죠?";
+      return "그럼 은행이나 카드 값, 보증기관 쪽에 현재 연체 걸려 있는 내역도 없으시죠?";
     case "credit":
       return "혹시 대표님 개인 신용점수나 예전 회생·신용회복 이력 때문에 마음 쓰이시는 부분은 없으세요?";
     case "industry":
@@ -271,16 +271,25 @@ export function ensureEndsWithFollowUpQuestion(
   replyText: string,
   currentAnswers: Answers = {}
 ): string {
-  const trimmed = replyText.trim();
+  // 여러 문단으로 나뉘어 어색해지지 않도록 한 호흡의 자연스러운 문단으로 정리
+  const singleParagraph = replyText
+    .replace(/\n+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
   const followUp = formatHumanFollowUpQuestion(currentAnswers);
-  if (!trimmed) return followUp;
+  if (!singleParagraph) return followUp;
 
-  // AI가 이미 스스로 따뜻한 질문을 만들어 물음표(?)나 권유형으로 끝냈다면 절대 기계적인 문장으로 덮어쓰지 않고 그대로 존중한다!
-  if (/[?？]\s*$/.test(trimmed) || /(알려주세요|말씀해\s*주세요|들려주세요|어떠세요|있으실까요)[.!~\s😊]*$/.test(trimmed)) {
-    return trimmed;
+  // AI가 이미 스스로 따뜻한 질문이나 권유로 끝냈다면 그대로 한 말풍선으로 반환
+  if (
+    /[?？]\s*$/.test(singleParagraph) ||
+    /(알려주세요|말씀해\s*주세요|들려주세요|어떠세요|있으실까요|맞으시죠)[.!~\s😊]*$/.test(
+      singleParagraph
+    )
+  ) {
+    return singleParagraph;
   }
 
-  return `${trimmed}\n\n${followUp}`;
+  return `${singleParagraph} ${followUp}`;
 }
 
 export function referenceReply(query: string, currentAnswers: Answers = {}) {
@@ -293,21 +302,21 @@ export function referenceReply(query: string, currentAnswers: Answers = {}) {
   if (!match || match.score < .35) {
     const empathy =
       /힘들|막막|걱정|어렵|죽겠|안\s*돼|바닥|급해/.test(query)
-        ? "에고, 요즘 경기 때문에 대표님들 마음이 다들 타들어 가시더라고요... 혼자 고민하시느라 정말 고생 많으셨어요. 제가 옆에서 하나씩 같이 짚어드릴 테니 너무 막막해하지 마세요."
+        ? "에고, 요즘 경기 때문에 대표님들 마음이 다들 타들어 가시더라고요. 혼자 고민하시느라 정말 고생 많으셨어요. 제가 옆에서 하나씩 같이 짚어드릴 테니 너무 막막해하지 마세요."
         : /시설|설비|기계|공장/.test(query)
-        ? "아, 이번에 기계나 설비를 새로 들이시려고 하시는군요! 큰맘 먹고 투자하시는 만큼 이자 부담 적고 조건 좋은 자금으로 잘 맞춰봐야죠."
+        ? "이번에 기계나 설비를 새로 들이시려고 하시는군요! 큰맘 먹고 투자하시는 만큼 이자 부담 적고 조건 좋은 자금으로 잘 맞춰봐야죠."
         : /운전|인건비|월세|운영|원재료|식당|가게/.test(query)
         ? "맞아요, 사업하다 보면 다달이 나가는 인건비랑 재료비, 월세 챙기는 게 제일 큰일이죠. 숨통이 좀 트이실 수 있게 운전자금 쪽부터 같이 찾아봐요."
         : /개인사업자|자영업|소상공인|카페/.test(query)
-        ? "네네, 개인사업자로 운영하고 계시는군요! 혼자 다 챙기시려면 신경 쓸 게 한두 가지가 아니실 텐데, 소진공이나 지역신보 쪽으로 잘 맞는지 제가 바로 봐드릴게요."
+        ? "개인사업자로 운영하고 계시는군요! 혼자 다 챙기시려면 신경 쓸 게 한두 가지가 아니실 텐데, 소진공이나 지역신보 쪽으로 잘 맞는지 제가 바로 봐드릴게요."
         : /법인/.test(query)
-        ? "아하, 법인으로 운영 중이시군요! 법인은 매출 흐름이랑 기술·인증 같은 강점을 잘 살리면 중진공이나 기보·신보에서 꽤 든든하게 길을 찾을 수 있어요."
+        ? "법인으로 운영 중이시군요! 법인은 매출 흐름이랑 기술·인증 같은 강점을 잘 살리면 중진공이나 기보·신보에서 꽤 든든하게 길을 찾을 수 있어요."
         : /없어요|없습니다|깨끗|정상/.test(query)
-        ? "오, 정말 다행이네요 대표님! 그런 기본 조건이 깔끔하면 우리가 골라볼 수 있는 정책자금 선택지가 훨씬 넓어지거든요."
-        : "네, 대표님 말씀 무슨 뜻인지 딱 알겠어요! 조급해하지 마시고 저랑 이야기 나누다 보면 우리 회사에 제일 잘 맞는 길이 보일 거예요.";
+        ? "정말 다행이네요 대표님! 그런 기본 조건이 깔끔하면 우리가 골라볼 수 있는 정책자금 선택지가 훨씬 넓어지거든요."
+        : "네, 대표님 말씀 무슨 뜻인지 딱 알겠어요! 조급해하지 마시고 저랑 이야기 나누다 보면 우리 회사에 제일 잘 맞는 길이 금방 보일 거예요.";
 
     return {
-      text: `${empathy}\n\n${followUpPrompt}`,
+      text: `${empathy} ${followUpPrompt}`,
       coreId: null,
       references: [],
     };
@@ -317,7 +326,7 @@ export function referenceReply(query: string, currentAnswers: Answers = {}) {
   const guidance = /우대|기술/.test(category)
     ? "특허나 연구소, 여성기업 같은 인증은 정말 든든한 무기가 될 수 있어요! 다만 가지고 계신 것만으로 바로 반영되진 않고, 유효한 증빙(확인서)이 있는지랑 우리가 넣을 공고에서 그걸 인정해 주는지 같이 맞춰봐야 실제 혜택으로 들어갑니다."
     : /복수|기존대출/.test(category)
-    ? "그 부분 정말 많이 걱정하시는데요, 대표님 명의로 다른 사업장이 하나 더 있다고 해서 그쪽 대출을 무조건 우리 회사 빚에 합쳐서 계산하진 않아요! 사업장별로, 또 기관별로 따로따로 나눠서 보니까 미리 겁먹지 않으셔도 괜찮습니다."
+    ? "그 부분 정말 많이 걱정하시는데요, 대표님 명의로 다른 사업장이 하나 더 있다고 해서 그쪽 대출을 무조건 우리 회사 빚에 합쳐서 계산하진 않아요. 사업장별로, 또 기관별로 따로따로 나눠서 보니까 미리 겁먹지 않으셔도 괜찮습니다."
     : /지역/.test(category)
     ? "본점이랑 실제 일하시는 사업장, 공장 주소가 다르면 어디를 기준으로 보는지 헷갈리시죠? 보통은 주소마다 역할을 나눠서 보는데, 특히 시설 투자나 지자체 자금은 실제로 설비를 놓고 일하시는 지역이 훨씬 중요하게 작용해요."
     : /체납|신용/.test(category)
@@ -328,7 +337,7 @@ export function referenceReply(query: string, currentAnswers: Answers = {}) {
 
   const institutions = match.core.institutions.split(" / ");
   return {
-    text: `${guidance}\n\n${followUpPrompt}`,
+    text: `${guidance} ${followUpPrompt}`,
     coreId: match.core.id,
     references: POLICY_REFERENCES.filter(r => institutions.includes(r.institution)).slice(0, 3),
   };

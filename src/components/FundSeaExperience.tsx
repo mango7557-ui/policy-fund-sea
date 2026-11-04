@@ -33,6 +33,13 @@ import {
   formatHumanFollowUpQuestion,
   ensureEndsWithFollowUpQuestion,
 } from "../engines/document-advisor";
+import {
+  buildEvolutionPromptContext,
+  evolveFromUserMessage,
+  INITIAL_EVOLUTION_STATE,
+  JeongchaegiEvolutionState,
+  rewardPositiveFeedback,
+} from "../engines/self-learning";
 import { QuestionLibrary, ReportSamples } from "./DocumentTools";
 import { ThemeToggle } from "./ThemeToggle";
 import { MascotMotion } from "./MascotMotion";
@@ -147,26 +154,13 @@ function nowTimeLabel(): string {
 }
 
 function splitIntoHumanBubbles(fullText: string): string[] {
-  const cleaned = fullText.replace(/\*\*/g, "").trim();
-  const paragraphs = cleaned
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-
-  if (paragraphs.length >= 2) {
-    return [paragraphs.slice(0, -1).join("\n\n"), paragraphs[paragraphs.length - 1]];
-  }
-
-  // 한 문단인데 문장이 3개 이상이고 끝에 물음표 질문이 있으면 마지막 질문을 두 번째 말풍선으로 분리
-  const sentences = cleaned.split(/(?<=[.?!])\s+/);
-  if (sentences.length >= 3 && sentences[sentences.length - 1].includes("?")) {
-    return [
-      sentences.slice(0, -1).join(" "),
-      sentences[sentences.length - 1],
-    ];
-  }
-
-  return [cleaned];
+  // 2개 말풍선으로 나뉘어 어색해지지 않도록 한 호흡의 자연스러운 단일 말풍선으로 정리
+  const singleBubble = fullText
+    .replace(/\*\*/g, "")
+    .replace(/\n+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return [singleBubble];
 }
 
 export default function FundSeaExperience() {
@@ -187,6 +181,11 @@ export default function FundSeaExperience() {
   const [geminiModel, setGeminiModel] = useState<string>("gemini-3-flash-preview");
   const [geminiConnected, setGeminiConnected] = useState<boolean>(true);
   const [customApiKey, setCustomApiKey] = useState<string>("");
+  const [evolution, setEvolution] = useState<JeongchaegiEvolutionState>(
+    INITIAL_EVOLUTION_STATE
+  );
+  const [learnToast, setLearnToast] = useState<string | null>(null);
+  const [teachInput, setTeachInput] = useState<string>("");
 
   const question = nextQuestion(answers);
   const result = freeDiagnosis(answers);
@@ -200,6 +199,13 @@ export default function FundSeaExperience() {
     try {
       const savedKey = localStorage.getItem("fundsea-gemini-key");
       if (savedKey) setCustomApiKey(savedKey);
+      const savedEvo = localStorage.getItem("fundsea-evolution-state");
+      if (savedEvo) {
+        const parsed = JSON.parse(savedEvo);
+        if (parsed && typeof parsed.level === "number") {
+          setEvolution(parsed);
+        }
+      }
     } catch {
       // Ignore storage access errors
     }
@@ -364,7 +370,8 @@ export default function FundSeaExperience() {
   const requestAIReply = async (
     userText: string,
     historySnapshot: { role: "user" | "assistant"; text: string }[],
-    currentAnswers: Answers
+    currentAnswers: Answers,
+    currentEvo: JeongchaegiEvolutionState
   ) => {
     const compact = userText.replace(/[!?.~,\s]/g, "");
     if (
@@ -373,7 +380,7 @@ export default function FundSeaExperience() {
       )
     ) {
       return {
-        text: `네, 안녕하세요 대표님! 반갑습니다 😊\n\n무엇을 도와드릴까요? 요즘 사업하시면서 자금 쪽으로 어떤 고민이 있으신지 편하게 말씀해 주세요~`,
+        text: `네, 안녕하세요 대표님! 반갑습니다 😊 무엇을 도와드릴까요? 요즘 사업하시면서 자금 쪽으로 어떤 고민이 있으신지 편하게 말씀해 주세요~`,
         source: aiEngine === "ollama" ? `Ollama (${ollamaModel})` : `Gemini (${geminiModel})`,
         links: [],
         isGreeting: true,
@@ -383,6 +390,7 @@ export default function FundSeaExperience() {
     const fallback = referenceReply(userText, currentAnswers);
     const trimmedKey = customApiKey.trim();
     const knownSummary = summarizeKnownFacts(currentAnswers);
+    const evoContext = buildEvolutionPromptContext(currentEvo);
 
     // 1. 개인 Gemini API 키가 설정된 경우
     if (trimmedKey.startsWith("AIza")) {
@@ -400,7 +408,7 @@ export default function FundSeaExperience() {
               systemInstruction: {
                 parts: [
                   {
-                    text: `당신은 따뜻하고 친절한 정책자금 전문 상담사 '정책이'입니다. 기계적인 번호 매기기나 자기소개를 하지 말고, 실제 사람과 카톡하듯 공감하며 2~3문장으로 답한 뒤 빈 줄(\\n\\n)을 넣고 마지막에 쉬운 질문 1개만 건네세요. 이미 파악된 정보(${knownSummary})는 다시 묻지 마세요. 현재 상태: ${diag.status}, 다음에 자연스럽게 이어갈 질문: ${upcoming?.text ?? "완료"}`,
+                    text: `당신은 따뜻하고 친절한 정책자금 전문 상담사 '정책이'입니다. 문단을 나누지 말고 하나의 자연스러운 말풍선(3~4문장) 안에서 대표님 말씀에 공감하고 쉽게 답한 뒤 마지막 문장에서 다음 질문(${upcoming?.text ?? "추가 질문"})을 부드럽게 건네세요. 이미 파악된 정보(${knownSummary})는 다시 묻지 마세요.\n${evoContext}`,
                   },
                 ],
               },
@@ -446,6 +454,7 @@ export default function FundSeaExperience() {
             message: userText,
             history: historySnapshot,
             answers: currentAnswers,
+            evolutionState: currentEvo,
             engine: aiEngine,
             clientApiKey: trimmedKey || undefined,
           }),
@@ -467,6 +476,17 @@ export default function FundSeaExperience() {
             }
             if (data.updatedAnswers && typeof data.updatedAnswers === "object") {
               setAnswers(data.updatedAnswers);
+            }
+            if (data.evolutionState && typeof data.evolutionState === "object") {
+              setEvolution(data.evolutionState);
+              try {
+                localStorage.setItem(
+                  "fundsea-evolution-state",
+                  JSON.stringify(data.evolutionState)
+                );
+              } catch {
+                // Ignore
+              }
             }
             return {
               text: data.text,
@@ -499,7 +519,7 @@ export default function FundSeaExperience() {
             messages: [
               {
                 role: "system",
-                content: `당신은 다정하고 유능한 정책자금 전문 상담사 '정책이'입니다. 번호 매기기나 자기소개를 빼고 실제 사람과 카톡으로 대화하듯 공감하며 2~3문장으로 쉽게 답한 뒤, 빈 줄(\\n\\n)을 넣고 마지막에 다음 질문("${upcoming?.text ?? "추가로 궁금하신 점이 있으신가요?"}")을 자연스럽게 물어보세요. 이미 확인된 정보(${knownSummary})는 중복해서 묻지 마세요. 현재 진단상태: ${diag.status} (${diag.direction})`,
+                content: `당신은 다정하고 인간적인 정책자금 전문 상담사 '정책이'입니다. 문단을 나누지 말고 하나의 자연스러운 말풍선(3~4문장) 안에서 대표님 말씀에 공감하고 쉽게 설명한 뒤 마지막 문장에서 다음 질문("${upcoming?.text ?? "추가로 궁금하신 점이 있으신가요?"}")을 부드럽게 물어보세요. 이미 확인된 정보(${knownSummary})는 중복해서 묻지 마세요. 현재 상태: ${diag.status}\n${evoContext}`,
               },
               ...historySnapshot.slice(-6).map((t) => ({
                 role: t.role === "assistant" ? "assistant" : "user",
@@ -570,15 +590,35 @@ export default function FundSeaExperience() {
       },
     ]);
 
+    const { nextState: nextEvo, newlyLearned } = evolveFromUserMessage(
+      evolution,
+      label
+    );
+    setEvolution(nextEvo);
+    try {
+      localStorage.setItem("fundsea-evolution-state", JSON.stringify(nextEvo));
+    } catch {
+      // Ignore
+    }
+    if (newlyLearned) {
+      setLearnToast(`🧠 정책이가 새로 기억했어요: ${newlyLearned}`);
+      setTimeout(() => setLearnToast(null), 4000);
+    }
+
     const summary = freeDiagnosis(updated);
     const followup = nextQuestion(updated);
-    const promptForAI = `대표님이 방금 "${label}"라고 답하셨어요. 자기소개 없이 바로 대표님 말씀에 따뜻하게 맞장구치면서 핵심 포인트(${summary.reasons[0]})를 한두 문장으로 쉽게 설명해 주세요. 그리고 빈 줄(\\n\\n)을 넣은 뒤 ${
+    const promptForAI = `대표님이 방금 "${label}"라고 답하셨어요. 문단을 2개로 나누지 말고, 하나의 자연스러운 말풍선 안에서 대표님 말씀에 다정하게 공감하며 핵심 포인트(${summary.reasons[0]})를 쉽게 설명한 뒤 마지막 문장에서 ${
       followup
-        ? `다음 확인 질문("${followup.text}")을 실제 상담사가 편하게 물어보듯 자연스러운 구어체로 여쭤봐 주세요.`
-        : `지금까지 확인된 결과(상태: ${summary.status}, 방향: ${summary.direction}, 지금 할 일: ${summary.action})를 친절하게 정리해 주세요.`
+        ? `다음 이야기("${followup.text}")를 친구 같은 상담사 말투로 자연스럽게 물어보세요.`
+        : `지금까지 확인된 결과(상태: ${summary.status}, 방향: ${summary.direction}, 지금 할 일: ${summary.action})를 따뜻하게 정리해 주세요.`
     }`;
 
-    const reply = await requestAIReply(promptForAI, historySnapshot, updated);
+    const reply = await requestAIReply(
+      promptForAI,
+      historySnapshot,
+      updated,
+      nextEvo
+    );
     await deliverHumanLikeAssistantTurn(runId, reply);
   };
 
@@ -598,6 +638,21 @@ export default function FundSeaExperience() {
       setAnswers(updatedAnswers);
     }
 
+    const { nextState: nextEvo, newlyLearned } = evolveFromUserMessage(
+      evolution,
+      text
+    );
+    setEvolution(nextEvo);
+    try {
+      localStorage.setItem("fundsea-evolution-state", JSON.stringify(nextEvo));
+    } catch {
+      // Ignore
+    }
+    if (newlyLearned) {
+      setLearnToast(`🧠 정책이가 스스로 학습했어요: ${newlyLearned}`);
+      setTimeout(() => setLearnToast(null), 4200);
+    }
+
     const runId = ++activeRunId.current;
     const historySnapshot = messages.map((m) => ({
       role: m.role,
@@ -615,7 +670,12 @@ export default function FundSeaExperience() {
       },
     ]);
 
-    const reply = await requestAIReply(text, historySnapshot, updatedAnswers);
+    const reply = await requestAIReply(
+      text,
+      historySnapshot,
+      updatedAnswers,
+      nextEvo
+    );
     if (!reply.isGreeting) {
       setDiagnosisStarted(true);
     }
@@ -749,22 +809,35 @@ export default function FundSeaExperience() {
                     <strong>
                       정책이{" "}
                       <span className="ai-badge">
-                        {aiEngine === "ollama"
-                          ? `Gemma 4`
-                          : `Gemini`}
+                        Lv.{evolution.level} {evolution.stageTitle}
                       </span>
                     </strong>
                     <small>
                       <i />{" "}
                       {busy
                         ? "답장을 입력하고 있어요..."
-                        : geminiConnected
-                        ? "지금 바로 대화 가능해요"
-                        : "정책자금 전담 상담사"}
+                        : `대화하며 스스로 학습·진화 중 (${
+                            aiEngine === "ollama" ? "Gemma 4" : "Gemini"
+                          } · 기억 ${evolution.learnedFacts.length}건)`}
                     </small>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => setModal("정책이 학습노트")}
+                    aria-label="정책이 학습노트"
+                    title="정책이 자가학습·진화 메모리 보기"
+                    style={{
+                      width: "auto",
+                      padding: "0 10px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    🧠 학습노트 ({evolution.learnedFacts.length})
+                  </button>
                   <button
                     type="button"
                     className="icon-button"
@@ -794,6 +867,20 @@ export default function FundSeaExperience() {
                   </button>
                 </div>
               </div>
+              {learnToast && (
+                <div
+                  style={{
+                    padding: "7px 18px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    background: "rgba(21, 126, 132, 0.16)",
+                    color: "#72d5ca",
+                    borderBottom: "1px solid rgba(72, 196, 193, 0.25)",
+                  }}
+                >
+                  {learnToast}
+                </div>
+              )}
               <div
                 className={`chat-stream ${messages.length ? "has-messages" : ""}`}
                 ref={stream}
@@ -854,6 +941,39 @@ export default function FundSeaExperience() {
                           <p>{m.text}</p>
                           {m.role === "assistant" && (
                             <span className="bubble-meta">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextEvo = rewardPositiveFeedback(
+                                    evolution,
+                                    m.text
+                                  );
+                                  setEvolution(nextEvo);
+                                  try {
+                                    localStorage.setItem(
+                                      "fundsea-evolution-state",
+                                      JSON.stringify(nextEvo)
+                                    );
+                                  } catch {
+                                    // Ignore
+                                  }
+                                  setLearnToast(
+                                    `✨ 대표님이 좋아하신 말투를 정책이가 학습했어요! (Lv.${nextEvo.level} · EXP ${nextEvo.exp}/${nextEvo.nextLevelExp})`
+                                  );
+                                  setTimeout(() => setLearnToast(null), 3500);
+                                }}
+                                title="이 답변 스타일을 정책이에게 학습시키기"
+                                style={{
+                                  border: 0,
+                                  background: "transparent",
+                                  color: "inherit",
+                                  fontSize: "10px",
+                                  padding: 0,
+                                  opacity: 0.75,
+                                }}
+                              >
+                                👍 공감돼요
+                              </button>
                               <time>{m.time}</time>
                             </span>
                           )}
@@ -1297,21 +1417,125 @@ export default function FundSeaExperience() {
               <FileText size={24} />
             </span>
             <h2 id="modal-title">{modal}</h2>
-            <p>
-              {modal === "자료 제출 안내"
-                ? "지금은 서류 없이 대화로 시작할 수 있어요. 파일 업로드와 공공 마이데이터 연결은 아직 제공되지 않습니다. 필요한 서류가 궁금하시면 정책이에게 물어보세요."
-                : modal === "개인정보 안내"
-                ? "이 화면에서 입력한 대화는 현재 브라우저 메모리에 보관됩니다. 새로고침하면 초기화되며, 상담 메모 저장을 선택하면 기기에 텍스트 파일로 내려받습니다. 주민등록번호·계좌 비밀번호 등 민감정보는 입력하지 마세요."
-                : modal === "서비스 이용 안내"
-                ? "현재는 질문은행과 AI(Gemma 4 / Gemini)를 결합한 대화형 사전 안내 버전입니다. 실시간 정책조회, 금융기관 접수 및 결제는 연결되어 있지 않습니다. 결과를 실제 신청에 활용하기 전 공식 공고와 기업 자료를 확인해야 합니다."
-                : `${modal}은 ${
-                    modal === "맞춤 방향 진단"
-                      ? "19,000원 · 접수 후 영업일 1일 이내"
-                      : modal === "정밀 실행 전략"
-                      ? "59,000원 · 전문가 검수 후 영업일 1~2일 이내"
-                      : "별도 견적·계약"
-                  } 제공을 기준으로 설계된 서비스입니다. 현재는 결제·접수 연동 준비 중이며, 이 화면에서 결제가 발생하지 않습니다.`}
-            </p>
+            {modal === "정책이 학습노트" ? (
+              <div style={{ display: "grid", gap: "12px", fontSize: "12px" }}>
+                <div
+                  style={{
+                    padding: "12px",
+                    borderRadius: "12px",
+                    background: "rgba(21, 126, 132, 0.14)",
+                    border: "1px solid rgba(72, 196, 193, 0.3)",
+                  }}
+                >
+                  <div style={{ fontWeight: 800, fontSize: "13px" }}>
+                    Lv.{evolution.level} {evolution.stageTitle} (EXP{" "}
+                    {evolution.exp}/{evolution.nextLevelExp})
+                  </div>
+                  <div style={{ marginTop: "4px", opacity: 0.85 }}>
+                    누적 대화 {evolution.totalConversations}회 · 공감 피드백{" "}
+                    {evolution.positiveFeedbacks}회 · 현재 말투:{" "}
+                    {evolution.preferredTone}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    maxHeight: "180px",
+                    overflowY: "auto",
+                    display: "grid",
+                    gap: "6px",
+                  }}
+                >
+                  {evolution.learnedFacts.map((fact) => (
+                    <div
+                      key={fact.id}
+                      style={{
+                        padding: "8px 10px",
+                        borderRadius: "9px",
+                        border: "1px solid rgba(139, 185, 183, 0.25)",
+                        fontSize: "11px",
+                      }}
+                    >
+                      <strong>• {fact.summary}</strong>{" "}
+                      <span style={{ opacity: 0.65, fontSize: "10px" }}>
+                        ({fact.learnedAt})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!teachInput.trim()) return;
+                    const { nextState } = evolveFromUserMessage(
+                      evolution,
+                      `기억해: ${teachInput.trim()}`
+                    );
+                    setEvolution(nextState);
+                    try {
+                      localStorage.setItem(
+                        "fundsea-evolution-state",
+                        JSON.stringify(nextState)
+                      );
+                    } catch {
+                      // Ignore
+                    }
+                    setTeachInput("");
+                    setLearnToast(
+                      `🧠 새로운 지침을 정책이가 학습해 진화했습니다! (Lv.${nextState.level})`
+                    );
+                    setTimeout(() => setLearnToast(null), 4000);
+                  }}
+                  style={{ display: "flex", gap: "6px" }}
+                >
+                  <input
+                    value={teachInput}
+                    onChange={(e) => setTeachInput(e.target.value)}
+                    placeholder="정책이에게 직접 가르치기 (예: 더 친근하고 짧게 말해줘)"
+                    style={{
+                      flex: 1,
+                      padding: "9px 11px",
+                      borderRadius: "9px",
+                      border: "1px solid rgba(139, 185, 183, 0.35)",
+                      background: "transparent",
+                      color: "inherit",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: "9px",
+                      border: 0,
+                      background: "#16868b",
+                      color: "#fff",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    학습시키기
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <p>
+                {modal === "자료 제출 안내"
+                  ? "지금은 서류 없이 대화로 시작할 수 있어요. 파일 업로드와 공공 마이데이터 연결은 아직 제공되지 않습니다. 필요한 서류가 궁금하시면 정책이에게 물어보세요."
+                  : modal === "개인정보 안내"
+                  ? "이 화면에서 입력한 대화는 현재 브라우저 메모리에 보관됩니다. 새로고침하면 초기화되며, 상담 메모 저장을 선택하면 기기에 텍스트 파일로 내려받습니다. 주민등록번호·계좌 비밀번호 등 민감정보는 입력하지 마세요."
+                  : modal === "서비스 이용 안내"
+                  ? "현재는 질문은행과 AI(Gemma 4 / Gemini)를 결합한 대화형 사전 안내 버전입니다. 실시간 정책조회, 금융기관 접수 및 결제는 연결되어 있지 않습니다. 결과를 실제 신청에 활용하기 전 공식 공고와 기업 자료를 확인해야 합니다."
+                  : `${modal}은 ${
+                      modal === "맞춤 방향 진단"
+                        ? "19,000원 · 접수 후 영업일 1일 이내"
+                        : modal === "정밀 실행 전략"
+                        ? "59,000원 · 전문가 검수 후 영업일 1~2일 이내"
+                        : "별도 견적·계약"
+                    } 제공을 기준으로 설계된 서비스입니다. 현재는 결제·접수 연동 준비 중이며, 이 화면에서 결제가 발생하지 않습니다.`}
+              </p>
+            )}
             <button
               className="modal-action"
               onClick={() => {
