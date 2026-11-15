@@ -1,2 +1,2 @@
-import FundSeaExperience from "../components/FundSeaExperience";
-export default function Page() { return <FundSeaExperience />; }
+import ExperienceRouter from "../components/ExperienceRouter";
+export default function Page() { return <ExperienceRouter />; }

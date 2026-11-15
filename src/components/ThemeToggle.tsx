@@ -8,7 +8,7 @@ export function ThemeToggle() {
   useEffect(() => {
     const sync = () => {
       let saved: string | null = null;
-      try { saved = localStorage.getItem("fundsea-theme"); } catch { /* Storage may be unavailable in previews. */ }
+      try { saved = localStorage.getItem("bareunfund-theme") ?? localStorage.getItem("fundsea-theme"); } catch { /* Storage may be unavailable in previews. */ }
       const next = saved === "light" || saved === "dark" ? saved : "dark";
       document.documentElement.dataset.theme = next;
       setTheme(next);
@@ -22,7 +22,7 @@ export function ThemeToggle() {
     const next = theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     setTheme(next);
-    try { localStorage.setItem("fundsea-theme", next); } catch { /* Keep the in-session choice. */ }
+    try { localStorage.setItem("bareunfund-theme", next); } catch { /* Keep the in-session choice. */ }
   };
   return <button type="button" className="theme-toggle" onClick={toggle} aria-label={theme === "dark" ? "화이트 모드로 전환" : "다크 모드로 전환"} title={theme === "dark" ? "화이트 모드로 전환" : "다크 모드로 전환"}>
     {theme === "dark" ? <Sun size={18}/> : <Moon size={18}/>}

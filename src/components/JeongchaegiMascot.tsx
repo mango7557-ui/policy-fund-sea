@@ -30,7 +30,7 @@ export function JeongchaegiMascot({
   return (
     <div
       className={`relative inline-flex items-center justify-center select-none shrink-0 ${sizeClass} ${className}`}
-      title="정책이 (정책 자금바다 AI 마스코트)"
+      title="정책이 (바른 자금 AI 마스코트)"
     >
       <img
         src="/jeongchaegi.svg"

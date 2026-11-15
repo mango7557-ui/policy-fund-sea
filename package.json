@@ -1,8 +1,8 @@
 {
-  "name": "policy-fund-sea",
+  "name": "bareun-fund",
   "version": "1.0.0",
   "private": true,
-  "description": "정책 자금바다 - AI 기반 맞춤형 정책자금 진단 및 조달 경로 추천 웹앱",
+  "description": "바른 자금 - AI 기반 맞춤형 정책자금 진단 및 조달 경로 추천 웹앱",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { matchTraining, parseTrainingStore, trainingPrompt, TrainingEntry } from "../../../engines/training";
+import { readTraining } from "../../../server/training-store";
 import {
   Answers,
   DOCUMENT_VERSION,
@@ -23,37 +25,6 @@ import {
   INITIAL_EVOLUTION_STATE,
   JeongchaegiEvolutionState,
 } from "../../../engines/self-learning";
-
-const LEARNED_MEMORY_FILE = path.join(
-  process.cwd(),
-  "src",
-  "data",
-  "learned-memory.json"
-);
-
-function loadServerEvolutionState(): JeongchaegiEvolutionState {
-  try {
-    if (fs.existsSync(LEARNED_MEMORY_FILE)) {
-      return JSON.parse(fs.readFileSync(LEARNED_MEMORY_FILE, "utf8"));
-    }
-  } catch {
-    // Ignore read error
-  }
-  return INITIAL_EVOLUTION_STATE;
-}
-
-function saveServerEvolutionState(state: JeongchaegiEvolutionState): void {
-  try {
-    fs.mkdirSync(path.dirname(LEARNED_MEMORY_FILE), { recursive: true });
-    fs.writeFileSync(
-      LEARNED_MEMORY_FILE,
-      JSON.stringify(state, null, 2),
-      "utf8"
-    );
-  } catch {
-    // Ignore write error in read-only environments
-  }
-}
 
 interface ChatTurn {
   role: "user" | "assistant";
@@ -321,16 +292,20 @@ export async function POST(req: NextRequest) {
       return jsonWithCors({ error: "질문 내용을 입력해 주세요." }, 400);
     }
 
-    // 정책이 자가학습·진화 업데이트
+    // Personal memory remains per browser; only authenticated published knowledge is shared.
     const baseEvoState: JeongchaegiEvolutionState =
       body?.evolutionState && typeof body.evolutionState === "object"
         ? body.evolutionState
-        : loadServerEvolutionState();
-    const { nextState: evolvedState, newlyLearned } = evolveFromUserMessage(
-      baseEvoState,
-      message
-    );
-    saveServerEvolutionState(evolvedState);
+        : INITIAL_EVOLUTION_STATE;
+    const { nextState: evolvedState, newlyLearned } = body?.evolutionState
+      ? { nextState: baseEvoState, newlyLearned: null }
+      : evolveFromUserMessage(baseEvoState, message);
+    let sessionTraining: TrainingEntry[] = [];
+    try { sessionTraining = parseTrainingStore({ version: 1, revision: 0, entries: body?.trainingEntries ?? [] }).entries; } catch { /* Ignore malformed session knowledge. */ }
+    let serverTraining: TrainingEntry[] = [];
+    try { serverTraining = readTraining().entries; } catch { /* Keep base consultation available. */ }
+    const training = [...new Map([...sessionTraining, ...serverTraining].map(e => [e.id, e])).values()].filter(e => e.status === "published");
+    const learnedMatches = matchTraining(training, message);
 
     // 가벼운 인사말("안녕하세요", "반갑습니다", "계세요?" 등)은 진짜 사람처럼 한 말풍선으로 다정하게 인사 응답
     const compactMsg = message.replace(/[!?.~,\s]/g, "");
@@ -389,6 +364,7 @@ export async function POST(req: NextRequest) {
       "4. 문단을 2개로 쪼개지 말고, 하나의 자연스러운 말풍선(3~4문장) 안에서 대표님 상황에 먼저 진심으로 공감하고 핵심 조언을 쉽게 풀어드린 뒤, 마지막 문장에서 대화가 이어지도록 부드러운 질문을 하나 건네세요. ('아, 그러시군요!' 같은 추임새를 문장 중간에 중복해서 쓰지 마세요.)",
       "",
       buildEvolutionPromptContext(evolvedState),
+      trainingPrompt(training, message),
       "",
       "[전문가로서 지켜야 할 사실 원칙]",
       "- '90% 승인', '무조건 승인', '확정 금액' 같은 단정 표현은 쓰지 마세요.",
@@ -500,8 +476,8 @@ export async function POST(req: NextRequest) {
     }
 
     return jsonWithCors({
-      text: fallback.text,
-      source: `정책이 상담 가이드 (${DOCUMENT_VERSION})`,
+      text: learnedMatches.length ? learnedMatches[0].content : fallback.text,
+      source: learnedMatches.length ? `등록된 학습 지식 · ${learnedMatches[0].title}` : `정책이 상담 가이드 (${DOCUMENT_VERSION})`,
       coreId: fallback.coreId,
       links: fallback.references,
       updatedAnswers: answers,

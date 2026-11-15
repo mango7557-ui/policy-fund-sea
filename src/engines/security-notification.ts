@@ -50,10 +50,10 @@ export function buildSecureNotificationMessage(params: {
     L3: "정밀전략 및 전문가 1차 검수 리포트",
   };
 
-  const secureLinkUrl = `https://fundsea.kr/secure-view/${params.tokenId}?v=${params.snapshotVersion}`;
+  const secureLinkUrl = `https://bareunfund.kr/secure-view/${params.tokenId}?v=${params.snapshotVersion}`;
 
   // 민감한 재무/신용 수치를 일절 포함하지 않는 보안 안내 문구
-  const messageBody = `[정책 자금바다] ${params.companyName} 대표님, 요청하신 '${
+  const messageBody = `[바른 자금] ${params.companyName} 대표님, 요청하신 '${
     tierNames[params.reportTier]
   } (v${params.snapshotVersion})' 작성이 완료되었습니다.\n\n개인·기업 신용 및 재무정보 보호를 위해 메시지 본문에는 진단 결과나 금액을 표기하지 않습니다.\n아래 보안 링크를 통해 안전하게 리포트를 열람해 주세요.\n\n▶ 보안 열람 링크: ${secureLinkUrl}\n(보안 세션 만료 시 휴대폰 일회성 인증 후 마이페이지에서 열람 가능)`;
 
