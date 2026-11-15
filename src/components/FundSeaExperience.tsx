@@ -407,8 +407,8 @@ export default function FundSeaExperience() {
       )
     ) {
       return {
-        text: `네, 안녕하세요 대표님! 반갑습니다 😊 무엇을 도와드릴까요? 요즘 사업하시면서 자금 쪽으로 어떤 고민이 있으신지 편하게 말씀해 주세요~`,
-        source: aiEngine === "ollama" ? `Ollama (${ollamaModel})` : `Gemini (${geminiModel})`,
+        text: historySnapshot.length ? "네, 듣고 있어요. 이어서 궁금하신 점을 말씀해 주세요." : "안녕하세요. 정책자금에 관해 궁금하신 점을 편하게 말씀해 주세요.",
+        source: "정책이 상담 가이드",
         links: [],
         isGreeting: true,
       };
@@ -436,7 +436,7 @@ export default function FundSeaExperience() {
               systemInstruction: {
                 parts: [
                   {
-                    text: `당신은 따뜻하고 친절한 정책자금 전문 상담사 '정책이'입니다. 문단을 나누지 말고 하나의 자연스러운 말풍선(3~4문장) 안에서 대표님 말씀에 공감하고 쉽게 답한 뒤 마지막 문장에서 다음 질문(${upcoming?.text ?? "추가 질문"})을 부드럽게 건네세요. 이미 파악된 정보(${knownSummary})는 다시 묻지 마세요.\n${evoContext}`,
+                    text: `당신은 정책자금 상담 도우미 '정책이'입니다. 사용자의 마지막 질문에 먼저 구체적으로 답하고, 대화 맥락을 이어가세요. 모르는 내용은 모른다고 말하고 승인이나 금액을 단정하지 마세요. 과장된 공감이나 반복 인사 없이 간결하고 자연스러운 존댓말을 쓰세요. 답에 필요한 경우에만 질문을 하나 하세요. 이미 파악된 정보(${knownSummary})는 다시 묻지 마세요. 참고할 다음 진단 항목: ${upcoming?.text ?? "없음"}.\n${evoContext}`,
                   },
                 ],
               },
@@ -634,16 +634,8 @@ export default function FundSeaExperience() {
       setTimeout(() => setLearnToast(null), 4000);
     }
 
-    const summary = freeDiagnosis(updated);
-    const followup = nextQuestion(updated);
-    const promptForAI = `대표님이 방금 "${label}"라고 답하셨어요. 문단을 2개로 나누지 말고, 하나의 자연스러운 말풍선 안에서 대표님 말씀에 다정하게 공감하며 핵심 포인트(${summary.reasons[0]})를 쉽게 설명한 뒤 마지막 문장에서 ${
-      followup
-        ? `다음 이야기("${followup.text}")를 친구 같은 상담사 말투로 자연스럽게 물어보세요.`
-        : `지금까지 확인된 결과(상태: ${summary.status}, 방향: ${summary.direction}, 지금 할 일: ${summary.action})를 따뜻하게 정리해 주세요.`
-    }`;
-
     const reply = await requestAIReply(
-      promptForAI,
+      label,
       historySnapshot,
       updated,
       nextEvo
@@ -663,9 +655,7 @@ export default function FundSeaExperience() {
     else if (/운전|인건비|원재료|운영|월세/.test(text)) setPurpose("운영·운전자금");
 
     const updatedAnswers = extractAnswersFromText(answers, text);
-    if (Object.keys(updatedAnswers).length !== Object.keys(answers).length) {
-      setAnswers(updatedAnswers);
-    }
+    setAnswers(updatedAnswers);
 
     const { nextState: nextEvo, newlyLearned } = evolveFromUserMessage(
       evolution,

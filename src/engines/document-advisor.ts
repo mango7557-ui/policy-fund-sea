@@ -38,6 +38,8 @@ export function answerQuestion(answers: Answers, key: AnswerKey, value: string):
 export function extractAnswersFromText(current: Answers, rawText: string): Answers {
   const t = rawText.trim();
   if (!t) return current;
+  // 질문에 등장한 조건을 고객이 사실로 진술한 것으로 기록하지 않는다.
+  if (/[?？]|무엇|뭐가|어떻게|어떤|가능한가|필요한가|되나요|있나요|할까요/.test(t)) return current;
   const next: Answers = { ...current };
 
   // 1. 자금 용도 (purpose)
@@ -289,7 +291,7 @@ export function ensureEndsWithFollowUpQuestion(
     return singleParagraph;
   }
 
-  return `${singleParagraph} ${followUp}`;
+  return singleParagraph;
 }
 
 export function referenceReply(query: string, currentAnswers: Answers = {}) {
@@ -298,8 +300,23 @@ export function referenceReply(query: string, currentAnswers: Answers = {}) {
   const match = hits[0];
   const followUpPrompt = formatHumanFollowUpQuestion(updatedAnswers);
 
+  // 자주 묻는 실무 질문은 진단 질문보다 먼저 직접 답한다.
+  if (/(서류|서식|증빙|준비물)/.test(query) && /(무엇|뭐|어떤|준비|필요|알려)/.test(query)) {
+    return {
+      text: "신청할 기관과 자금 종류에 따라 서류가 달라요. 보통 사업자등록증, 최근 매출을 확인할 자료, 국세·지방세 납세증명서와 기존 대출 관련 자료부터 살펴봅니다. 시설자금이라면 설비 견적서도 필요할 수 있어요. 어느 기관에 신청하실 예정인지 아시면 그에 맞춰 확인해 볼게요.",
+      coreId: null,
+      references: [],
+    };
+  }
+
   // The source workbook marks answers unreviewed. It is an intent bank, not an approved answer bank.
   if (!match || match.score < .35) {
+    const isQuestion = /[?？]|무엇|뭐|어떻게|왜|언제|어디|가능|알려/.test(query);
+    if (isQuestion) return {
+      text: "말씀하신 질문은 기관과 공고에 따라 답이 달라질 수 있어요. 지금 가진 자료만으로는 정확히 답하기 어려워요. 신청하려는 기관이나 자금의 종류를 알려주시면 관련 내용을 함께 살펴볼게요.",
+      coreId: null,
+      references: [],
+    };
     const empathy =
       /힘들|막막|걱정|어렵|죽겠|안\s*돼|바닥|급해/.test(query)
         ? "에고, 요즘 경기 때문에 대표님들 마음이 다들 타들어 가시더라고요. 혼자 고민하시느라 정말 고생 많으셨어요. 제가 옆에서 하나씩 같이 짚어드릴 테니 너무 막막해하지 마세요."
@@ -313,7 +330,7 @@ export function referenceReply(query: string, currentAnswers: Answers = {}) {
         ? "법인으로 운영 중이시군요! 법인은 매출 흐름이랑 기술·인증 같은 강점을 잘 살리면 중진공이나 기보·신보에서 꽤 든든하게 길을 찾을 수 있어요."
         : /없어요|없습니다|깨끗|정상/.test(query)
         ? "정말 다행이네요 대표님! 그런 기본 조건이 깔끔하면 우리가 골라볼 수 있는 정책자금 선택지가 훨씬 넓어지거든요."
-        : "네, 대표님 말씀 무슨 뜻인지 딱 알겠어요! 조급해하지 마시고 저랑 이야기 나누다 보면 우리 회사에 제일 잘 맞는 길이 금방 보일 거예요.";
+        : "말씀해 주셔서 고맙습니다. 상황에 맞는 방향을 살펴볼게요.";
 
     return {
       text: `${empathy} ${followUpPrompt}`,

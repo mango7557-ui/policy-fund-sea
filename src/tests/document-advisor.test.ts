@@ -1,10 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { QUESTION_BANK, POLICY_REFERENCES, PREFERENCE_REFERENCES, DIAGNOSIS_QUESTIONS, Answers, answerQuestion, nextQuestion, freeDiagnosis, searchQuestions, referenceReply, collectionRoute, reportReadiness } from "../engines/document-advisor";
+import { QUESTION_BANK, POLICY_REFERENCES, PREFERENCE_REFERENCES, DIAGNOSIS_QUESTIONS, Answers, answerQuestion, nextQuestion, freeDiagnosis, searchQuestions, referenceReply, collectionRoute, reportReadiness, extractAnswersFromText, ensureEndsWithFollowUpQuestion } from "../engines/document-advisor";
 import manifest from "../data/master/manifest.json";
 import samples from "../data/master/sample-cases.json";
 
 const complete: Answers = { purpose: "working", entity: "sole", operation: "active", tax: "none", overdue: "none", credit: "none", industry: "eligible", ceo: "yes", related: "none", finance: "normal", documents: "ready" };
 describe("문서 기반 UAT 회귀검증", () => {
+  it("서류 질문에 먼저 답하고 질문 속 조건을 고객 사실로 저장하지 않는다", () => {
+    const reply = referenceReply("정책자금 신청 서류는 무엇을 준비하나요?");
+    expect(reply.text).toContain("사업자등록증");
+    expect(reply.text).not.toContain("어떤 자금이 제일 절실");
+    expect(extractAnswersFromText({}, "법인도 설비자금 신청이 가능한가요?")).toEqual({});
+    expect(extractAnswersFromText({}, "법인이고 기계를 구입하려고 해요")).toMatchObject({ entity: "corporation", purpose: "facility" });
+    expect(ensureEndsWithFollowUpQuestion("기관별 공고를 확인해 주세요.")).toBe("기관별 공고를 확인해 주세요.");
+  });
   it("7개 원문과 100개 대표질문·1,000개 변형의 출처를 보존한다", () => {
     expect(manifest).toHaveLength(7);
     expect(manifest.every(m => m.sha256.length === 64)).toBe(true);
