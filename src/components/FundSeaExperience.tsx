@@ -755,6 +755,7 @@ export default function FundSeaExperience() {
           <a href="#plans">진단 서비스</a>
           <a href="#cases">상담 사례</a>
           <a href="#success-cases">성공 사례</a>
+          <a href="#partners">파트너사</a>
           <a href="#faq">자주 묻는 질문</a>
         </nav>
         <ThemeToggle />
@@ -780,6 +781,7 @@ export default function FundSeaExperience() {
           </a>
           <a onClick={() => setMenu(false)} href="#cases">상담 사례</a>
           <a onClick={() => setMenu(false)} href="#success-cases">성공 사례</a>
+          <a onClick={() => setMenu(false)} href="#partners">파트너사</a>
           <a onClick={() => setMenu(false)} href="#faq">
             자주 묻는 질문
           </a>
@@ -1372,6 +1374,10 @@ export default function FundSeaExperience() {
         <section className="success-section section-shell" id="success-cases" aria-labelledby="success-title">
           <div className="section-heading"><span className="mini-label">성공 사례</span><h2 id="success-title">확인된 성과를<br />투명하게 전하겠습니다.</h2><p>현재 공개 가능한 실제 자금조달 성공 사례는 준비 중입니다.<br />기업의 동의와 결과 확인을 거친 사례를 소개하겠습니다.</p></div>
           <div className="success-note"><ShieldCheck size={24} aria-hidden="true" /><div><strong>사실을 확인한 사례만 소개합니다</strong><p>가상 테스트 사례와 실제 승인·실행 결과를 구분합니다. 자금조달 결과는 기업 상황과 기관 심사에 따라 달라집니다.</p></div></div>
+        </section>
+        <section className="success-section section-shell" id="partners" aria-labelledby="partners-title">
+          <div className="section-heading"><span className="mini-label">파트너사</span><h2 id="partners-title">기업의 다음 단계를<br />함께할 파트너</h2><p>기업의 자금조달과 경영에 필요한 분야별 파트너를 소개할 예정입니다.</p></div>
+          <div className="success-note"><Building2 size={24} aria-hidden="true" /><div><strong>파트너사 안내 준비 중</strong><p>제휴 관계와 공개 정보를 확인한 후 소개하겠습니다.</p></div></div>
         </section>
         <section className="faq-section section-shell" id="faq">
           <div className="section-heading">
