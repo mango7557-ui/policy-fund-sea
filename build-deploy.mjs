@@ -27,9 +27,9 @@ const css = (await Promise.all(["globals.css", "editorial.css", "admin.css", "ma
   '@import "tailwindcss";',
   ""
 );
-const themeInit = `(function(){try{var t=localStorage.getItem('bareunfund-theme')||localStorage.getItem('fundsea-theme');document.documentElement.dataset.theme=t==='light'||t==='dark'?t:'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();`;
+const themeInit = `(function(){try{var t=localStorage.getItem('bareunfund-theme')||localStorage.getItem('fundsea-theme');document.documentElement.dataset.theme=t==='light'||t==='dark'?t:'light'}catch(e){document.documentElement.dataset.theme='light'}})();`;
 
-const htmlContent = `<!doctype html><html lang="ko" data-theme="dark"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>바른 자금 · 정책이와 함께하는 AI 정책자금 진단</title><script>${themeInit}</script><style>${css}</style></head><body><div id="root"></div><script src="./app.js"></script></body></html>`;
+const htmlContent = `<!doctype html><html lang="ko" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>바른자금 · 우리 기업의 자금 기회</title><meta name="description" content="바른 정보로 찾는, 우리 기업의 자금 기회"><script>${themeInit}</script><style>${css}</style></head><body><div id="root"></div><script src="./app.js"></script></body></html>`;
 
 await writeFile("dist/index.html", htmlContent);
 await writeFile("dist/.nojekyll", "");

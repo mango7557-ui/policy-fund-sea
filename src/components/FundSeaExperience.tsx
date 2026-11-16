@@ -738,15 +738,7 @@ export default function FundSeaExperience() {
     <div className="sea-app">
       <a className="skip-link" href="#main-content">본문으로 바로가기</a>
       <header className="sea-header">
-        <a href="#" className="sea-brand" aria-label="바른 자금 홈">
-          <span className="brand-mark">
-            <Waves size={24} />
-          </span>
-          <span>
-            바른 <span className="brand-light">자금</span>
-            <small>BAREUN FUND</small>
-          </span>
-        </a>
+        <a href="#" className="sea-brand brand-guide-logo" aria-label="바른자금 홈"><img src="./barun-brand.jpg" alt="바른자금 · 정책자금, 지원금, 환급금, 지원사업" /></a>
         <nav className="desktop-nav" aria-label="주 메뉴">
           <a className="active" href="#diagnosis">
             AI 자금진단
@@ -793,16 +785,16 @@ export default function FundSeaExperience() {
           <div className="hero-orbit orbit-two" />
           <div className="hero-content">
             <div className="eyebrow">
-              <span /> 사업의 다음 항로를 함께
+              <span /> 중소기업과 소상공인을 위한 자금·지원정보
             </div>
             <h1>
-              사업에 집중하세요.
+              바른 정보로 찾는,
               <br />
-              <span>자금의 길을 찾겠습니다.</span>
+              <span>우리 기업의 자금 기회</span>
             </h1>
             <p className="hero-description">
-              공고를 읽는 시간보다, 사업을 키우는 시간이 더 많아지도록.
-              <br /> 지금 필요한 자금부터 준비 순서까지 차근차근 정리해 드립니다.
+              정책자금과 지원정보를 더 쉽게 이해하고 준비할 수 있도록,
+              <br /> 확인된 정보와 추가 확인이 필요한 조건을 함께 안내합니다.
             </p>
             <div className="hero-actions">
               <button onClick={start}>우리 기업의 자금 방향 찾기 <ArrowUpRight size={19} /></button>
@@ -1429,12 +1421,7 @@ export default function FundSeaExperience() {
       </main>
       <footer className="sea-footer section-shell">
         <div className="footer-top">
-          <a className="sea-brand" href="#">
-            <span className="brand-mark">
-              <Waves size={22} />
-            </span>
-            <span>바른 자금</span>
-          </a>
+          <a className="sea-brand brand-guide-logo" href="#" aria-label="바른자금 홈"><img src="./barun-brand.jpg" alt="바른자금 · 정책자금, 지원금, 환급금, 지원사업" /></a>
           <div>
             <a className="admin-entry" href="#admin">학습 관리 <ArrowUpRight size={13} /></a>
             <button onClick={() => setModal("개인정보 안내")}>

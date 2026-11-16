@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   useEffect(() => {
     const sync = () => {
       let saved: string | null = null;
       try { saved = localStorage.getItem("bareunfund-theme") ?? localStorage.getItem("fundsea-theme"); } catch { /* Storage may be unavailable in previews. */ }
-      const next = saved === "light" || saved === "dark" ? saved : "dark";
+      const next = saved === "light" || saved === "dark" ? saved : "light";
       document.documentElement.dataset.theme = next;
       setTheme(next);
     };
