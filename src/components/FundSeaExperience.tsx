@@ -44,6 +44,7 @@ import { QuestionLibrary, ReportSamples } from "./DocumentTools";
 import { ThemeToggle } from "./ThemeToggle";
 import { MascotMotion } from "./MascotMotion";
 import { FundingNavigator } from "./FundingNavigator";
+import { FundingNeeds } from "./FundingNeeds";
 import { matchTraining, parseTrainingStore, readLocalTraining, trainingPrompt, TrainingEntry, TRAINING_EVENT } from "../engines/training";
 
 type Message = {
@@ -363,7 +364,6 @@ export default function FundSeaExperience() {
         await new Promise((r) => setTimeout(r, reducedMotion ? 40 : 420));
       }
 
-      setBusy(false);
       setMessages((prev) => [
         ...prev,
         {
@@ -392,6 +392,7 @@ export default function FundSeaExperience() {
         );
       }
     }
+    if (activeRunId.current === runId) setBusy(false);
   };
 
   const requestAIReply = async (
@@ -414,7 +415,7 @@ export default function FundSeaExperience() {
       };
     }
 
-    const fallback = referenceReply(userText, currentAnswers);
+    const fallback = referenceReply(userText, currentAnswers, historySnapshot);
     const trimmedKey = customApiKey.trim();
     const knownSummary = summarizeKnownFacts(currentAnswers);
     const evoContext = `${buildEvolutionPromptContext(currentEvo)}\n${trainingPrompt(training, userText)}`;
@@ -471,7 +472,8 @@ export default function FundSeaExperience() {
     }
 
     // 2. 로컬/서버 AI 라우트(Ollama Gemma 4 & Gemini) 호출
-    for (const apiUrl of API_ENDPOINTS) {
+    const apiEndpoints = window.location.hostname.endsWith("github.io") ? [] : API_ENDPOINTS;
+    for (const apiUrl of apiEndpoints) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 45000);
@@ -1178,6 +1180,8 @@ export default function FundSeaExperience() {
             </aside>
           </div>
           <QuestionLibrary onAsk={send} />
+          <FundingNeeds />
+          <details className="document-tools"><summary>바른자금의 진단과 AI 이용 원칙</summary><div className="document-tool-body"><p>기업이 제공한 정보와 진단 규칙을 바탕으로 검토 방향과 근거를 정리합니다. AI는 결과를 이해하기 쉽게 설명하는 보조 도구이며, 자금 승인이나 신용등급을 결정하지 않습니다.</p><p>현재 입력 정보는 증빙 확인 전입니다. 외부 데이터 조회, NICE D&amp;B 연계, 자료 업로드와 전문가 연결은 아직 제공되지 않습니다. 체납, 자본잠식, 거절 이력이나 복잡한 조달은 전문가의 별도 검토가 필요합니다.</p><p>내부 진단은 금융기관의 심사나 신용평가 등급이 아니며, 실제 자격과 승인 여부는 해당 기관의 최신 기준과 심사로 결정됩니다.</p></div></details>
           <details className="document-tools">
             <summary>
               자료 확인 방법 · 자동조회가 안 되어도 계속할 수 있어요

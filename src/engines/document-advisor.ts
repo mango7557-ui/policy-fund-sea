@@ -294,11 +294,20 @@ export function ensureEndsWithFollowUpQuestion(
   return singleParagraph;
 }
 
-export function referenceReply(query: string, currentAnswers: Answers = {}) {
+export function referenceReply(query: string, currentAnswers: Answers = {}, history: { role: "user" | "assistant"; text: string }[] = []) {
   const updatedAnswers = extractAnswersFromText(currentAnswers, query);
   const hits = searchQuestions(query);
   const match = hits[0];
   const followUpPrompt = formatHumanFollowUpQuestion(updatedAnswers);
+
+  const previousUser = [...history].reverse().find(message => message.role === "user")?.text ?? "";
+  if (/(어디|어떻게).*(발급|떼|받)|발급.*(어디|방법)/.test(query) && /(서류|서식|증빙|준비물|증명서)/.test(`${query} ${previousUser}`)) {
+    return {
+      text: "서류마다 발급처가 달라요. 사업자등록증명과 국세 납세증명은 홈택스, 지방세 납세증명은 정부24나 위택스에서 발급할 수 있어요. 금융거래확인서는 거래 금융기관에 문의하시면 됩니다. 어떤 서류의 발급 방법이 궁금하신가요?",
+      coreId: null,
+      references: [],
+    };
+  }
 
   // 자주 묻는 실무 질문은 진단 질문보다 먼저 직접 답한다.
   if (/(서류|서식|증빙|준비물)/.test(query) && /(무엇|뭐|어떤|준비|필요|알려)/.test(query)) {
@@ -319,7 +328,7 @@ export function referenceReply(query: string, currentAnswers: Answers = {}) {
     };
     const empathy =
       /힘들|막막|걱정|어렵|죽겠|안\s*돼|바닥|급해/.test(query)
-        ? "에고, 요즘 경기 때문에 대표님들 마음이 다들 타들어 가시더라고요. 혼자 고민하시느라 정말 고생 많으셨어요. 제가 옆에서 하나씩 같이 짚어드릴 테니 너무 막막해하지 마세요."
+        ? "걱정이 많으시겠어요. 현재 상황에서 먼저 확인할 수 있는 것부터 함께 살펴볼게요."
         : /시설|설비|기계|공장/.test(query)
         ? "이번에 기계나 설비를 새로 들이시려고 하시는군요! 큰맘 먹고 투자하시는 만큼 이자 부담 적고 조건 좋은 자금으로 잘 맞춰봐야죠."
         : /운전|인건비|월세|운영|원재료|식당|가게/.test(query)
@@ -347,7 +356,7 @@ export function referenceReply(query: string, currentAnswers: Answers = {}) {
     : /지역/.test(category)
     ? "본점이랑 실제 일하시는 사업장, 공장 주소가 다르면 어디를 기준으로 보는지 헷갈리시죠? 보통은 주소마다 역할을 나눠서 보는데, 특히 시설 투자나 지자체 자금은 실제로 설비를 놓고 일하시는 지역이 훨씬 중요하게 작용해요."
     : /체납|신용/.test(category)
-    ? "세금이나 연체 문제가 조금 걸려 있으면 신청조차 못 할까 봐 마음 무거우실 텐데요. 만약 접수 전에 완납하실 수 있거나 세무서에서 분납·징수유예 승인을 받으셨다면 바로 탈락시키지 않고 예외로 검토해 주는 길이 열려 있어요."
+    ? "세금 체납이나 연체가 있다면 현재 상태와 처리 내역을 먼저 확인해 보세요. 분납이나 유예 상태의 인정 여부는 신청할 기관과 공고에 따라 다르므로 해당 기관에 직접 확인해야 해요."
     : /시설/.test(category)
     ? "새 기계나 시설 들일 때는 견적서랑 설치할 장소, 그리고 대표님이 보태실 자기자금 계획을 같이 보면서 퍼즐 맞추듯 설계해요. 금액이 꽤 크다면 정책자금이랑 보증서를 똑똑하게 나눠서 준비하는 게 훨씬 수월합니다."
     : "우리 회사 업종이랑 규모, 그리고 기존에 쓰시던 대출이 어느 기관 건지만 잘 살펴봐도 갈 수 있는 길이 훨씬 선명해져요. 서류를 직접 보기 전에는 섣불리 금액을 단정 짓지 않고 가장 안전한 경로부터 차근차근 짚어드릴게요.";

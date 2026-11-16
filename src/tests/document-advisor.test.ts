@@ -13,6 +13,14 @@ describe("문서 기반 UAT 회귀검증", () => {
     expect(extractAnswersFromText({}, "법인이고 기계를 구입하려고 해요")).toMatchObject({ entity: "corporation", purpose: "facility" });
     expect(ensureEndsWithFollowUpQuestion("기관별 공고를 확인해 주세요.")).toBe("기관별 공고를 확인해 주세요.");
   });
+  it("서류에 관한 후속 질문을 앞선 대화와 연결한다", () => {
+    const history: { role: "user" | "assistant"; text: string }[] = [
+      { role: "user", text: "정책자금 신청 서류가 뭐예요?" },
+      { role: "assistant", text: "사업자등록증과 납세증명서 등이 필요할 수 있어요." },
+    ];
+    expect(referenceReply("어디서 발급받나요?", {}, history).text).toContain("홈택스");
+    expect(referenceReply("어디서 발급받나요?").text).not.toContain("홈택스");
+  });
   it("7개 원문과 100개 대표질문·1,000개 변형의 출처를 보존한다", () => {
     expect(manifest).toHaveLength(7);
     expect(manifest.every(m => m.sha256.length === 64)).toBe(true);
