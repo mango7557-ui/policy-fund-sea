@@ -5,10 +5,12 @@ import { ArrowDownToLine, ArrowLeft, ArrowUpRight, BookOpen, Check, CircleHelp, 
 import { CATEGORIES, EMPTY_TRAINING, matchTraining, parseTrainingStore, readLocalTraining, saveLocalTraining, TrainingEntry, TrainingStore } from "../engines/training";
 import { INITIAL_EVOLUTION_STATE, JeongchaegiEvolutionState } from "../engines/self-learning";
 import { ThemeToggle } from "./ThemeToggle";
+import { MasterDataBrowser } from "./MasterDataBrowser";
 
-type Tab = "knowledge" | "memory" | "test" | "settings";
+type Tab = "knowledge" | "sources" | "memory" | "test" | "settings";
 const tabs: { id: Tab; name: string; icon: typeof BookOpen; detail: string }[] = [
   { id: "knowledge", name: "학습 지식", icon: BookOpen, detail: "정책이가 참고하는 답변의 기준을 정리합니다." },
+  { id: "sources", name: "원본 자료", icon: FileText, detail: "기존에 가져온 자료를 검색하고 학습 초안을 만듭니다." },
   { id: "memory", name: "상담 기억", icon: LayoutDashboard, detail: "이 브라우저에 저장된 상담 맥락과 피드백을 살펴봅니다." },
   { id: "test", name: "답변 테스트", icon: FlaskConical, detail: "등록한 지식이 어떤 질문에 연결되는지 확인합니다." },
   { id: "settings", name: "연결·백업", icon: Settings2, detail: "서버 연결과 학습 데이터 백업을 관리합니다." },
@@ -143,6 +145,7 @@ export default function LearningAdmin() {
           <section className="admin-guide"><div><span className="mini-label">A SMALL GUIDE</span><h3>잘 가르치는 세 가지 방법</h3></div><article><b>01</b><strong>하나의 주제, 하나의 지식</strong><p>질문과 답변을 구체적으로 적으면 필요한 순간에 찾기 쉽습니다.</p></article><article><b>02</b><strong>출처와 조건을 함께</strong><p>공고 링크, 적용 기간, 예외 조건을 내용에 함께 남겨주세요.</p></article><article><b>03</b><strong>게시 후 질문해 보기</strong><p>답변 테스트에서 실제 질문으로 검색 결과를 확인하세요.</p></article></section>
         </>}
 
+        {tab === "sources" && <MasterDataBrowser onDraft={entry => setEditing(entry)} />}
         {tab === "memory" && <section className="admin-panel"><div className="admin-panel-heading"><div><h2>상담에서 기억한 이야기</h2><p>개인 상담 기억은 공통 학습 지식과 별도로, 이 브라우저에서 관리합니다.</p></div></div><div className="memory-tone"><span>현재 선호 말투</span><strong>{memory.preferredTone}</strong></div><div className="memory-list">{memory.learnedFacts.map(f => <article key={f.id}><span className="document-icon"><MessageIcon category={f.category} /></span><div><small>{{ CEO_CONTEXT: "기업 맥락", TONE_PREF: "말투·지침", CUSTOM_QA: "질문·답변", FEEDBACK: "답변 피드백" }[f.category]}</small><p>{f.summary}</p></div><button className="admin-icon-button" aria-label={`${f.summary} 기억 삭제`} onClick={() => { try { const facts = memory.learnedFacts.filter(item => item.id !== f.id); const next = { ...memory, learnedFacts: facts, preferredTone: f.category === "TONE_PREF" ? INITIAL_EVOLUTION_STATE.preferredTone : memory.preferredTone }; localStorage.setItem("bareunfund-evolution-state", JSON.stringify(next)); setMemory(next); setNotice("상담 기억을 삭제했습니다. 다음 상담부터 반영됩니다."); } catch { setError("브라우저 저장 공간에 접근할 수 없습니다."); } }}><Trash2 size={16} /></button></article>)}{!memory.learnedFacts.length && <div className="admin-empty"><p>저장된 상담 기억이 없습니다.</p></div>}</div></section>}
 
         {tab === "test" && <div className="admin-test-grid"><section className="admin-panel test-input"><span className="mini-label">PLAYGROUND</span><h2>대표님처럼 질문해 보세요.</h2><p>{server ? "실제 상담 API를 통해 게시된 지식이 반영된 답변을 확인합니다." : "게시된 지식의 검색 결과를 확인합니다. 서버 연결 시 실제 AI 답변도 테스트할 수 있습니다."}</p><form onSubmit={e => { e.preventDefault(); runTest(); }}><label>테스트 질문<textarea value={testQuery} onChange={e => setTestQuery(e.target.value)} placeholder="예: 운전자금 신청에 어떤 서류가 필요한가요?" maxLength={1500} rows={5} required /></label><button className="admin-primary" disabled={testing || !testQuery.trim()}>{testing ? "답변 확인 중…" : "답변 테스트"}<ArrowUpRight size={16} /></button></form><div className="test-note"><CircleHelp size={16} />초안은 검색 및 답변에 반영되지 않습니다.</div></section><section className="admin-panel test-output"><div className="admin-panel-heading"><h2>테스트 결과</h2><FlaskConical size={18} /></div>{testResult ? <div className="test-result" aria-live="polite"><span className="storage-badge">{testResult.source}</span><p>{testResult.text}</p><h3>연결된 학습 지식 · {testResult.matches.length}</h3>{testResult.matches.map(m => <button key={m.id} onClick={() => setEditing({ ...m })}><FileText size={16} />{m.title}<ArrowUpRight size={14} /></button>)}</div> : <div className="admin-empty"><FlaskConical size={32} strokeWidth={1.2} /><h3>질문 하나로 확인하는 학습의 방향</h3><p>왼쪽에 질문을 입력하면 연결되는 지식을 보여드립니다.</p></div>}</section></div>}
