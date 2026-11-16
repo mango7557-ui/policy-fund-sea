@@ -753,6 +753,7 @@ export default function FundSeaExperience() {
           </a>
           <a href="#how">이용 방법</a>
           <a href="#plans">진단 서비스</a>
+          <a href="#cases">상담 사례</a>
           <a href="#faq">자주 묻는 질문</a>
         </nav>
         <ThemeToggle />
@@ -776,6 +777,7 @@ export default function FundSeaExperience() {
           <a onClick={() => setMenu(false)} href="#plans">
             진단 서비스
           </a>
+          <a onClick={() => setMenu(false)} href="#cases">상담 사례</a>
           <a onClick={() => setMenu(false)} href="#faq">
             자주 묻는 질문
           </a>
@@ -1356,6 +1358,19 @@ export default function FundSeaExperience() {
             <ReportSamples />
           </div>
         </div>
+        <section className="cases-section section-shell" id="cases" aria-labelledby="cases-title">
+          <div className="section-heading"><span className="mini-label">상담 사례</span><h2 id="cases-title">기업마다 다른 고민,<br />확인할 방향도 다릅니다.</h2><p>제공된 테스트 자료를 바탕으로 구성한 가상 사례입니다.<br />실제 상담이나 승인 결과를 뜻하지 않습니다.</p></div>
+          <div className="case-list">
+            <article><span>01 / 창업 소상공인</span><h3>인건비가 필요한 초기 사업자</h3><p>운영자금이 필요한 상황에서 업력과 기존 대출, 청년 우대 요건을 함께 확인합니다.</p><strong>확인할 것</strong><p>매출 자료 · 기존 대출 · 공고별 우대 조건</p></article>
+            <article><span>02 / 시설 투자</span><h3>여러 사업체를 운영하며 설비를 늘릴 때</h3><p>시설 투자 계획과 관계 사업체의 채무를 구분해 확인하고 필요한 증빙을 정리합니다.</p><strong>확인할 것</strong><p>설비 견적 · 사업체별 차입 · 투자 계획</p></article>
+            <article><span>03 / 재무 개선</span><h3>자금 신청 전 재무 상황을 살펴야 할 때</h3><p>재무·신용 상태가 취약한 가상 기업의 경우 추가 차입보다 현금흐름과 개선 방안을 먼저 검토합니다.</p><strong>확인할 것</strong><p>재무자료 · 상환 부담 · 전문가 검토 필요성</p></article>
+          </div>
+          <button className="cases-action" onClick={start}>우리 기업 상황 상담하기 <ArrowUpRight size={16} /></button>
+        </section>
+        <section className="success-section section-shell" id="success-cases" aria-labelledby="success-title">
+          <div className="section-heading"><span className="mini-label">성공 사례</span><h2 id="success-title">확인된 성과를<br />투명하게 전하겠습니다.</h2><p>현재 공개 가능한 실제 자금조달 성공 사례는 준비 중입니다.<br />기업의 동의와 결과 확인을 거친 사례를 소개하겠습니다.</p></div>
+          <div className="success-note"><ShieldCheck size={24} aria-hidden="true" /><div><strong>사실을 확인한 사례만 소개합니다</strong><p>가상 테스트 사례와 실제 승인·실행 결과를 구분합니다. 자금조달 결과는 기업 상황과 기관 심사에 따라 달라집니다.</p></div></div>
+        </section>
         <section className="faq-section section-shell" id="faq">
           <div className="section-heading">
             <span className="mini-label">자주 묻는 질문</span>
