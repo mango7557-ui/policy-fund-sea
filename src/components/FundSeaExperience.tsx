@@ -754,6 +754,7 @@ export default function FundSeaExperience() {
           <a href="#how">이용 방법</a>
           <a href="#plans">진단 서비스</a>
           <a href="#cases">상담 사례</a>
+          <a href="#success-cases">성공 사례</a>
           <a href="#faq">자주 묻는 질문</a>
         </nav>
         <ThemeToggle />
@@ -778,6 +779,7 @@ export default function FundSeaExperience() {
             진단 서비스
           </a>
           <a onClick={() => setMenu(false)} href="#cases">상담 사례</a>
+          <a onClick={() => setMenu(false)} href="#success-cases">성공 사례</a>
           <a onClick={() => setMenu(false)} href="#faq">
             자주 묻는 질문
           </a>
