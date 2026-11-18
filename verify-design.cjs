@@ -90,8 +90,10 @@ async function verify() {
     const reports = page.locator('.sample-library');
     await reports.locator('summary').click();
     const before = await reports.locator('.sample-content').innerText();
-    await reports.getByLabel('사례', { exact: true }).selectOption({ index: 1 });
-    await reports.getByLabel('리포트 등급').selectOption({ index: 1 });
+    const controls = reports.getByRole('combobox');
+    assert.equal(await controls.count(), 2);
+    await controls.nth(0).selectOption({ index: 1 });
+    await controls.nth(1).selectOption({ index: 1 });
     const after = await reports.locator('.sample-content').innerText();
     assert(after.trim() && after !== before, 'Sample report did not change');
     await page.getByRole('link', { name: '학습 관리' }).click();
