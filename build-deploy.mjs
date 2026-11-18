@@ -1,42 +1,59 @@
 import { build } from "esbuild";
-import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { cp, mkdir, readdir, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { readStyles, renderLanding, renderPage, staticBuildOptions } from "./build-static.mjs";
 
-await mkdir("dist", { recursive: true });
-await mkdir("docs", { recursive: true });
+const options = await staticBuildOptions("./");
+const [bundle, css, body] = await Promise.all([
+  build({
+    ...options,
+    entryPoints: { app: "src/preview.tsx" },
+    outdir: "dist",
+    chunkNames: "assets/[name]-[hash]",
+    format: "esm",
+    splitting: true,
+    metafile: true,
+    minify: true,
+    write: false,
+  }),
+  readStyles(),
+  renderLanding(options),
+]);
 
-const result = await build({
-  entryPoints: ["src/preview.tsx"],
-  bundle: true,
-  write: false,
-  minify: true,
-  format: "iife",
-  jsx: "automatic",
-  define: { "process.env.NODE_ENV": '"production"' },
+const outputs = bundle.outputFiles.map(file => ({
+  name: path.relative("dist", file.path),
+  contents: file.contents,
+}));
+const entry = outputs.find(file => file.name === "app.js");
+const version = bytes => createHash("sha256").update(bytes).digest("hex").slice(0, 12);
+// Start fetching shared dependencies alongside the entry. The admin import
+// remains on demand when someone follows the management link.
+const preloads = bundle.metafile.outputs["dist/app.js"].imports
+  .filter(dependency => dependency.kind === "import-statement")
+  .map(dependency => `<link rel="modulepreload" href="./${path.posix.relative("dist", dependency.path)}">`)
+  .join("\n");
+const html = renderPage({
+  body,
+  published: true,
+  styles: `<link rel="stylesheet" href="./site.css?v=${version(css)}">`,
+  scriptTag: `<script type="module" src="./app.js?v=${version(entry.contents)}"></script>`,
+  preloads,
 });
 
-// Relative paths("./jeongchaegi.svg") work on both Firebase Hosting root and GitHub Pages subpaths
-const js = result.outputFiles[0].text
-  .replaceAll('"/jeongchaegi.svg"', '"./jeongchaegi.svg"')
-  .replaceAll('"/jeongchaek-motion.mp4"', '"./jeongchaek-motion.mp4"')
-  .replaceAll('"/jeongchaek-motion-poster.jpg"', '"./jeongchaek-motion-poster.jpg"');
+for (const target of ["dist", "docs"]) {
+  const assetsPath = path.join(target, "assets");
+  await mkdir(assetsPath, { recursive: true });
+  await cp("public", target, { recursive: true });
+  await Promise.all(outputs.map(file => writeFile(path.join(target, file.name), file.contents)));
+  await writeFile(path.join(target, "site.css"), css);
+  await writeFile(path.join(target, "index.html"), html);
+  await writeFile(path.join(target, ".nojekyll"), "");
 
-await writeFile("dist/app.js", js);
-await cp("public", "dist", { recursive: true });
-
-const css = (await Promise.all(["globals.css", "editorial.css", "admin.css", "maritime.css"].map(name => readFile(`src/app/${name}`, "utf8")))).join("\n").replace(
-  '@import "tailwindcss";',
-  ""
-);
-const themeInit = `(function(){try{var t=localStorage.getItem('bareunfund-theme')||localStorage.getItem('fundsea-theme');document.documentElement.dataset.theme=t==='light'||t==='dark'?t:'light'}catch(e){document.documentElement.dataset.theme='light'}})();`;
-
-const htmlContent = `<!doctype html><html lang="ko" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>바른자금 · 우리 기업의 자금 기회</title><meta name="description" content="바른 정보로 찾는, 우리 기업의 자금 기회"><script>${themeInit}</script><style>${css}</style></head><body><div id="root"></div><script src="./app.js"></script></body></html>`;
-
-await writeFile("dist/index.html", htmlContent);
-await writeFile("dist/.nojekyll", "");
-
-await writeFile("docs/app.js", js);
-await cp("public", "docs", { recursive: true });
-await writeFile("docs/index.html", htmlContent);
-await writeFile("docs/.nojekyll", "");
-
-console.log("Built static bundle in dist/ (Firebase Hosting) & docs/ (GitHub Pages)");
+  const currentFiles = new Set(outputs.map(file => path.basename(file.name)));
+  const oldChunks = (await readdir(assetsPath)).filter(name =>
+    /^[\w-]+-[A-Z0-9]{8}\.js$/.test(name) && !currentFiles.has(name)
+  );
+  await Promise.all(oldChunks.map(name => unlink(path.join(assetsPath, name))));
+}
+console.log("Built the public site in dist/ and docs/.");

@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   FileText,
   Check,
-  ChevronDown,
   X,
   Sparkles,
   Building2,
@@ -41,10 +40,10 @@ import {
   rewardPositiveFeedback,
 } from "../engines/self-learning";
 import { QuestionLibrary, ReportSamples } from "./DocumentTools";
-import { ThemeToggle } from "./ThemeToggle";
-import { MascotMotion } from "./MascotMotion";
+import { FundingEntry, SiteHeader } from "./HomepageEntry";
 import { FundingNavigator } from "./FundingNavigator";
 import { FundingNeeds } from "./FundingNeeds";
+import { ConsultationCases } from "./ConsultationCases";
 import { matchTraining, parseTrainingStore, readLocalTraining, trainingPrompt, TrainingEntry, TRAINING_EVENT } from "../engines/training";
 
 type Message = {
@@ -106,7 +105,7 @@ const starters = [
 const plans = [
   {
     name: "무료 AI 진단",
-    tag: "가능성부터 가볍게",
+    tag: "이용 가능",
     price: "0",
     sub: "바로 시작할 수 있어요",
     items: [
@@ -119,7 +118,7 @@ const plans = [
   },
   {
     name: "맞춤 방향 진단",
-    tag: "우리 기업에 맞는 선택",
+    tag: "출시 준비 중",
     price: "19,000",
     sub: "접수 후 영업일 1일 이내",
     items: [
@@ -132,7 +131,7 @@ const plans = [
   },
   {
     name: "정밀 실행 전략",
-    tag: "다음 행동까지 구체적으로",
+    tag: "출시 준비 중",
     price: "59,000",
     sub: "접수 후 영업일 1~2일 이내",
     items: [
@@ -148,7 +147,7 @@ const plans = [
 const faqs = [
   {
     q: "무료 진단만 이용해도 되나요?",
-    a: "네. 기본 자격과 검토할 방향, 부족한 정보, 다음 행동을 무료로 안내받을 수 있어요. 더 구체적인 기관 비교나 실행계획이 필요할 때 유료 진단을 선택하시면 됩니다.",
+    a: "네. 기본 자격과 검토할 방향, 부족한 정보, 다음 행동을 무료로 안내받을 수 있어요. 지금 바로 이용할 수 있는 것은 무료 사전 상담입니다. 유료 진단은 제공 내용을 미리 확인할 수 있어요.",
   },
   {
     q: "진단 결과가 나오면 자금을 받을 수 있나요?",
@@ -188,11 +187,9 @@ function splitIntoHumanBubbles(fullText: string): string[] {
 export default function FundSeaExperience() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [typing, setTyping] = useState("");
   const [busy, setBusy] = useState(false);
   const [typingStatusText, setTypingStatusText] = useState("정책이가 메시지를 읽고 있어요...");
   const [modal, setModal] = useState<string | null>(null);
-  const [menu, setMenu] = useState(false);
   const [faq, setFaq] = useState<number | null>(0);
   const [purpose, setPurpose] = useState("");
   const [saved, setSaved] = useState(false);
@@ -201,7 +198,7 @@ export default function FundSeaExperience() {
   const [aiEngine, setAiEngine] = useState<"ollama" | "gemini">("ollama");
   const [ollamaModel, setOllamaModel] = useState<string>("gemma4:latest");
   const [geminiModel, setGeminiModel] = useState<string>("gemini-3-flash-preview");
-  const [geminiConnected, setGeminiConnected] = useState<boolean>(true);
+  const [aiConnected, setAiConnected] = useState(false);
   const [customApiKey, setCustomApiKey] = useState<string>("");
   const [evolution, setEvolution] = useState<JeongchaegiEvolutionState>(
     INITIAL_EVOLUTION_STATE
@@ -267,7 +264,7 @@ export default function FundSeaExperience() {
           if (res.ok && ct.includes("application/json")) {
             const info = await res.json();
             if (info?.connected) {
-              setGeminiConnected(true);
+              setAiConnected(true);
               if (info.ollamaModel) setOllamaModel(String(info.ollamaModel));
               if (info.geminiModel) setGeminiModel(String(info.geminiModel));
               if (info.ollamaAvailable) setAiEngine("ollama");
@@ -280,33 +277,6 @@ export default function FundSeaExperience() {
         }
       }
     })();
-  }, []);
-
-  useEffect(() => {
-    const phrase = "무엇을 도와드릴까요?";
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setTyping(phrase);
-      return;
-    }
-    let index = 0;
-    let reverse = false;
-    let timer: ReturnType<typeof setTimeout>;
-    const tick = () => {
-      index += reverse ? -1 : 1;
-      setTyping(phrase.slice(0, index));
-      let delay = reverse ? 55 : 110;
-      if (index === phrase.length) {
-        reverse = true;
-        delay = 2200;
-      }
-      if (index === 0) {
-        reverse = false;
-        delay = 600;
-      }
-      timer = setTimeout(tick, delay);
-    };
-    timer = setTimeout(tick, 450);
-    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -479,7 +449,7 @@ export default function FundSeaExperience() {
               ?.map((p: { text?: string }) => p?.text ?? "")
               .join("")
               .trim() || fallback.text;
-          setGeminiConnected(true);
+          setAiConnected(true);
           setGeminiModel("gemini-2.5-flash");
           return {
             text: directText,
@@ -517,7 +487,7 @@ export default function FundSeaExperience() {
         if (res.ok && contentType.includes("application/json")) {
           const data = await res.json();
           if (data && typeof data.text === "string") {
-            setGeminiConnected(
+            setAiConnected(
               data.provider === "ollama" || data.provider === "gemini"
             );
             if (data.provider === "ollama" && data.model) {
@@ -606,14 +576,14 @@ export default function FundSeaExperience() {
     };
   };
 
-  const start = () => {
+  const openConsultation = (focusComposer: boolean) => {
     setDiagnosisStarted(true);
-    setMenu(false);
-    document
-      .getElementById("consultation")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    field.current?.focus({ preventScroll: true });
+    const workspace = document.getElementById("consultation");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    workspace?.scrollIntoView({ behavior: reduceMotion ? "instant" : "smooth", block: "start" });
+    (focusComposer ? field.current : workspace)?.focus({ preventScroll: true });
   };
+  const start = () => openConsultation(true);
 
   const chooseAnswer = async (key: AnswerKey, value: string, label: string) => {
     if (busy) return;
@@ -757,93 +727,12 @@ export default function FundSeaExperience() {
   return (
     <div className="sea-app">
       <a className="skip-link" href="#main-content">본문으로 바로가기</a>
-      <header className="sea-header">
-        <a href="#" className="sea-brand brand-guide-logo" aria-label="바른자금 홈"><img src="./bareun-brand.png" alt="바른자금 BAREUN FUND" /></a>
-        <nav className="desktop-nav" aria-label="주 메뉴">
-          <a className="active" href="#diagnosis">
-            AI 자금진단
-          </a>
-          <a href="#how">이용 방법</a>
-          <a href="#plans">진단 서비스</a>
-          <a href="#cases">상담 사례</a>
-          <a href="#success-cases">성공 사례</a>
-          <a href="#partners">파트너사</a>
-          <a href="#faq">자주 묻는 질문</a>
-        </nav>
-        <ThemeToggle />
-        <button className="header-cta" onClick={start}>
-          무료 진단 시작 <ArrowUpRight size={16} />
-        </button>
-        <button
-          className="mobile-menu"
-          onClick={() => setMenu(!menu)}
-          aria-label="메뉴 열기"
-          aria-expanded={menu}
-        >
-          <ChevronDown size={22} />
-        </button>
-      </header>
-      {menu && (
-        <nav className="mobile-dropdown">
-          <a onClick={() => setMenu(false)} href="#how">
-            이용 방법
-          </a>
-          <a onClick={() => setMenu(false)} href="#plans">
-            진단 서비스
-          </a>
-          <a onClick={() => setMenu(false)} href="#cases">상담 사례</a>
-          <a onClick={() => setMenu(false)} href="#success-cases">성공 사례</a>
-          <a onClick={() => setMenu(false)} href="#partners">파트너사</a>
-          <a onClick={() => setMenu(false)} href="#faq">
-            자주 묻는 질문
-          </a>
-        </nav>
-      )}
+      <SiteHeader onStart={start} />
       <main id="main-content" tabIndex={-1}>
         <section className="sea-hero" id="diagnosis">
-          <div className="hero-orbit orbit-one" />
-          <div className="hero-orbit orbit-two" />
-          <div className="hero-content">
-            <div className="eyebrow">
-              <span /> 중소기업과 소상공인을 위한 자금·지원정보
-            </div>
-            <h1>
-              바른 정보로 찾는,
-              <br />
-              <span>우리 기업의 자금 기회</span>
-            </h1>
-            <p className="hero-description">
-              정책자금과 지원정보를 더 쉽게 이해하고 준비할 수 있도록,
-              <br /> 확인된 정보와 추가 확인이 필요한 조건을 함께 안내합니다.
-            </p>
-            <div className="hero-actions">
-              <button onClick={start}>우리 기업의 자금 방향 찾기 <ArrowUpRight size={19} /></button>
-              <a href="#how">어떻게 진행되나요? <ArrowRight size={16} /></a>
-            </div>
-            <div className="hero-pills">
-              <span>
-                <Check size={14} /> 무료로 시작
-              </span>
-              <span>
-                <Check size={14} /> 필요한 질문만
-              </span>
-              <span>
-                <Check size={14} /> 근거 있는 안내
-              </span>
-            </div>
-          </div>
-          <div className="hero-mascot">
-            <div className="funding-chart" aria-hidden="true"><svg viewBox="0 0 360 260" fill="none"><path className="chart-contour" d="M-20 180C65 80 160 255 240 150S365 35 390 90M-20 200C65 100 160 275 240 170S365 55 390 110M-20 220C65 120 160 295 240 190S365 75 390 130M-20 240C65 140 160 315 240 210S365 95 390 150" /><path className="chart-route" d="M38 180C85 180 88 88 155 96S242 185 304 60" /><circle cx="38" cy="180" r="5" /><circle cx="155" cy="96" r="5" /><circle cx="304" cy="60" r="7" /></svg><span className="chart-label chart-label-start">지금의 사업</span><span className="chart-label chart-label-end">다음 성장</span></div>
-            <span className="mascot-speech">
-              대표님, 함께 찾아볼까요? <Sparkles size={13} />
-            </span>
-            <MascotMotion />
-            <span className="mascot-label">
-              복잡한 이야기도 편하게. <b>정책이</b>
-            </span>
-          </div>
+          <FundingEntry onStart={start} busy={busy} onTopic={(prompt) => { openConsultation(false); void send(prompt); }} />
           <div className="workspace-label"><span><i /> 정책이 상담실</span><p>대표님의 이야기가, 진단의 시작입니다.</p><span>무료 사전 진단</span></div>
-          <div className="workspace" id="consultation">
+          <div className="workspace" id="consultation" role="region" aria-label="자금 상담" tabIndex={-1}>
             <section className="sea-chat" aria-label="정책이와 상담">
               <div className="chat-top">
                 <div className="assistant-profile">
@@ -881,25 +770,20 @@ export default function FundSeaExperience() {
                   >
                     상담 기억 {evolution.learnedFacts.length}
                   </button>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() =>
-                      setAiEngine((prev) =>
-                        prev === "ollama" ? "gemini" : "ollama"
-                      )
-                    }
-                    aria-label="AI 엔진 전환"
-                    title="Ollama Gemma 4 ↔ Gemini 전환"
-                    style={{
-                      width: "auto",
-                      padding: "0 10px",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {aiEngine === "ollama" ? "Gemma 4" : "Gemini"}
-                  </button>
+                  {customApiKey.trim().startsWith("AIza") ? (
+                    <span className="chat-mode-label">Gemini</span>
+                  ) : aiConnected ? (
+                    <button
+                      type="button"
+                      className="icon-button"
+                      onClick={() => setAiEngine(prev => prev === "ollama" ? "gemini" : "ollama")}
+                      aria-label="사용할 AI 엔진 전환"
+                    >
+                      {aiEngine === "ollama" ? "Gemma 4" : "Gemini"}
+                    </button>
+                  ) : (
+                    <span className="chat-mode-label">문서 기반</span>
+                  )}
                   <button
                     className="icon-button"
                     onClick={reset}
@@ -935,12 +819,7 @@ export default function FundSeaExperience() {
                       <Sparkles size={24} />
                     </span>
                     <p className="welcome-kicker">안녕하세요, 대표님!</p>
-                    <h2 aria-label="무엇을 도와드릴까요?">
-                      <span aria-hidden="true">
-                        {typing}
-                        <i className="typing-caret" />
-                      </span>
-                    </h2>
+                    <h2>무엇을 도와드릴까요?</h2>
                     <p>
                       옆자리 전문 상담사에게 물어보듯 편하게 말씀해 주세요.
                       <br />
@@ -1318,20 +1197,15 @@ export default function FundSeaExperience() {
           <div className="section-shell">
             <div className="section-heading centered">
               <span className="mini-label">진단 서비스</span>
-              <h2>필요한 만큼, 한 단계씩.</h2>
-              <p>가능성 확인부터 전문가와 함께하는 실행 전략까지.</p>
+              <h2>진단 서비스 비교</h2>
+              <p>무료 상담은 지금 이용할 수 있습니다. 유료 진단은 출시 예정입니다.</p>
             </div>
             <div className="plan-grid">
-              {plans.map((p, index) => (
+              {plans.map((p) => (
                 <article
-                  className={`plan-card ${index === 1 ? "featured" : ""}`}
+                  className={`plan-card ${p.tier === "L1" ? "featured" : ""}`}
                   key={p.tier}
                 >
-                  {index === 1 && (
-                    <div className="plan-ribbon">
-                      방향을 구체적으로 알고 싶다면
-                    </div>
-                  )}
                   <span className="plan-tag">{p.tag}</span>
                   <h3>{p.name}</h3>
                   <div className="plan-price">
@@ -1359,8 +1233,7 @@ export default function FundSeaExperience() {
             </div>
             <div className="consulting-row">
               <span>
-                <b>신청 준비부터 도움이 필요하신가요?</b> 전문가 실행 컨설팅은 별도
-                계약으로 진행해요.
+                <b>신청 준비부터 도움이 필요하신가요?</b> 전문가 실행 컨설팅의 제공 예정 내용을 확인하세요.
               </span>
               <button onClick={() => setModal("실행 컨설팅")}>
                 서비스 안내 <ArrowUpRight size={15} />
@@ -1379,23 +1252,21 @@ export default function FundSeaExperience() {
             <ReportSamples />
           </div>
         </div>
-        <section className="cases-section section-shell" id="cases" aria-labelledby="cases-title">
-          <div className="section-heading"><span className="mini-label">상담 사례</span><h2 id="cases-title">기업마다 다른 고민,<br />확인할 방향도 다릅니다.</h2><p>제공된 테스트 자료를 바탕으로 구성한 가상 사례입니다.<br />실제 상담이나 승인 결과를 뜻하지 않습니다.</p></div>
-          <div className="case-list">
-            <article><span>01 / 창업 소상공인</span><h3>인건비가 필요한 초기 사업자</h3><p>운영자금이 필요한 상황에서 업력과 기존 대출, 청년 우대 요건을 함께 확인합니다.</p><strong>확인할 것</strong><p>매출 자료 · 기존 대출 · 공고별 우대 조건</p></article>
-            <article><span>02 / 시설 투자</span><h3>여러 사업체를 운영하며 설비를 늘릴 때</h3><p>시설 투자 계획과 관계 사업체의 채무를 구분해 확인하고 필요한 증빙을 정리합니다.</p><strong>확인할 것</strong><p>설비 견적 · 사업체별 차입 · 투자 계획</p></article>
-            <article><span>03 / 재무 개선</span><h3>자금 신청 전 재무 상황을 살펴야 할 때</h3><p>재무·신용 상태가 취약한 가상 기업의 경우 추가 차입보다 현금흐름과 개선 방안을 먼저 검토합니다.</p><strong>확인할 것</strong><p>재무자료 · 상환 부담 · 전문가 검토 필요성</p></article>
-          </div>
-          <button className="cases-action" onClick={start}>우리 기업 상황 상담하기 <ArrowUpRight size={16} /></button>
-        </section>
-        <section className="success-section section-shell" id="success-cases" aria-labelledby="success-title">
-          <div className="section-heading"><span className="mini-label">성공 사례</span><h2 id="success-title">확인된 성과를<br />투명하게 전하겠습니다.</h2><p>현재 공개 가능한 실제 자금조달 성공 사례는 준비 중입니다.<br />기업의 동의와 결과 확인을 거친 사례를 소개하겠습니다.</p></div>
-          <div className="success-note"><ShieldCheck size={24} aria-hidden="true" /><div><strong>사실을 확인한 사례만 소개합니다</strong><p>가상 테스트 사례와 실제 승인·실행 결과를 구분합니다. 자금조달 결과는 기업 상황과 기관 심사에 따라 달라집니다.</p></div></div>
-        </section>
-        <section className="success-section section-shell" id="partners" aria-labelledby="partners-title">
-          <div className="section-heading"><span className="mini-label">파트너사</span><h2 id="partners-title">기업의 다음 단계를<br />함께할 파트너</h2><p>기업의 자금조달과 경영에 필요한 분야별 파트너를 소개할 예정입니다.</p></div>
-          <div className="success-note"><Building2 size={24} aria-hidden="true" /><div><strong>파트너사 안내 준비 중</strong><p>제휴 관계와 공개 정보를 확인한 후 소개하겠습니다.</p></div></div>
-        </section>
+        <ConsultationCases onAsk={prompt => { openConsultation(false); void send(prompt); }} />
+        <div className="publication-panels section-shell">
+          <section id="success-cases" aria-labelledby="success-title">
+            <ShieldCheck size={23} aria-hidden="true" />
+            <div><h2 id="success-title">성공 사례</h2>
+              <p>현재 공개된 실제 조달 사례는 없습니다. 실행 결과와 기업의 공개 동의를 확인한 뒤 익명으로 소개합니다.</p>
+            </div>
+          </section>
+          <section id="partners" aria-labelledby="partners-title">
+            <Building2 size={23} aria-hidden="true" />
+            <div><h2 id="partners-title">파트너사</h2>
+              <p>공개가 확정된 제휴사는 아직 없습니다. 제휴가 확인되면 기관명과 협력 분야를 함께 안내합니다.</p>
+            </div>
+          </section>
+        </div>
         <section className="faq-section section-shell" id="faq">
           <div className="section-heading">
             <span className="mini-label">자주 묻는 질문</span>
@@ -1424,7 +1295,7 @@ export default function FundSeaExperience() {
                   <span>{item.q}</span>
                   <Plus size={18} />
                 </button>
-                {faq === index && <p id={`faq-${index}`}>{item.a}</p>}
+                <p hidden={faq !== index} id={`faq-${index}`}>{item.a}</p>
               </article>
             ))}
           </div>
@@ -1446,7 +1317,7 @@ export default function FundSeaExperience() {
       </main>
       <footer className="sea-footer section-shell">
         <div className="footer-top">
-          <a className="sea-brand brand-guide-logo" href="#" aria-label="바른자금 홈"><img src="./bareun-brand.png" alt="바른자금 BAREUN FUND" /></a>
+          <a className="sea-brand brand-guide-logo" href="#" aria-label="바른자금 홈"><img src="./bareun-brand.webp" alt="바른자금 BAREUN FUND" /></a>
           <div>
             <a className="admin-entry" href="#admin">학습 관리 <ArrowUpRight size={13} /></a>
             <button onClick={() => setModal("개인정보 안내")}>
@@ -1464,7 +1335,7 @@ export default function FundSeaExperience() {
         </p>
         <div className="footer-bottom">
           <span>
-            © {new Date().getFullYear()} 바른 자금. All rights reserved.
+            © {new Date().getFullYear()} 바른자금. All rights reserved.
           </span>
           <span>기업의 가능성에, 바른 기준을.</span>
         </div>
