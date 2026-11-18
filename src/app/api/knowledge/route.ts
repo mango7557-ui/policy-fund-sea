@@ -4,6 +4,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const store = readTraining();
-    return NextResponse.json({ ...store, entries: store.entries.filter(e => e.status === "published") }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ...store, entries: store.entries.filter(e => e.status === "published") }, {
+      headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "https://mango7557-ui.github.io" },
+    });
   } catch { return NextResponse.json({ error: "학습 자료를 불러오지 못했습니다." }, { status: 503 }); }
 }

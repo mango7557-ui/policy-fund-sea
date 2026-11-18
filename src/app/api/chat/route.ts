@@ -43,11 +43,11 @@ const OLLAMA_BASE_URL =
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "gemma4:latest";
 
 export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+  return new NextResponse(null, { status: 204, headers: process.env.NODE_ENV === "development" ? CORS_HEADERS : {} });
 }
 
 function jsonWithCors(payload: Record<string, unknown>, status = 200) {
-  return NextResponse.json(payload, { status, headers: CORS_HEADERS });
+  return NextResponse.json(payload, { status, headers: process.env.NODE_ENV === "development" ? CORS_HEADERS : {} });
 }
 
 async function checkOllamaStatus(): Promise<{
@@ -109,7 +109,7 @@ function resolveGeminiConfig(clientKey?: string): {
   let gskKey = process.env.GSK_API_KEY || null;
   let gskBase = "https://www.genspark.ai";
 
-  if (!gskKey) {
+  if (!gskKey && (process.env.GSK_CONFIG || process.env.NODE_ENV === "development")) {
     try {
       const cfgPath =
         process.env.GSK_CONFIG ||
@@ -266,6 +266,15 @@ async function callGeminiChat(params: {
 }
 
 export async function POST(req: NextRequest) {
+  if (process.env.NODE_ENV === "production") {
+    const origin = req.headers.get("origin");
+    if (origin && origin !== req.nextUrl.origin && origin !== `${req.nextUrl.protocol}//${req.headers.get("host")}`) {
+      return NextResponse.json({ error: "사이트에서 상담을 시작해 주세요." }, { status: 403 });
+    }
+    if (req.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
+      return NextResponse.json({ error: "JSON 요청이 필요합니다." }, { status: 415 });
+    }
+  }
   try {
     const body = await req.json();
     const message = String(body?.message ?? "").trim();

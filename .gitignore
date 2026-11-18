@@ -15,6 +15,9 @@ design-*.png
 *.log
 .firebase/
 .data/
+/bareun-reference-transfer.zip
+/.ops-publish/
+/.bareun-production/
 src/data/learned-memory.json
 
 # local env files (never commit secrets)

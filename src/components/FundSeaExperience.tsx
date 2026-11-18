@@ -58,13 +58,32 @@ type Message = {
   followUpHead?: boolean;
 };
 
-const API_ENDPOINTS = [
-  "http://localhost:3057/api/chat",
-  "http://127.0.0.1:3057/api/chat",
-  "http://localhost:3056/api/chat",
-  "http://localhost:3055/api/chat",
-  "/api/chat",
-];
+function usesPages() {
+  return window.location.hostname.endsWith(".github.io");
+}
+
+function isLocalPreview() {
+  return window.location.protocol === "file:" || (
+    ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname) && /\.html$/.test(window.location.pathname)
+  );
+}
+
+function chatEndpoints() {
+  if (usesPages()) return [];
+  if (!isLocalPreview()) return ["/api/chat"];
+  return ["/api/chat", "http://localhost:3057/api/chat", "http://localhost:3056/api/chat", "http://localhost:3055/api/chat"];
+}
+
+async function publishedKnowledgeUrl(): Promise<string | null> {
+  if (!usesPages()) return "/api/knowledge";
+  const response = await fetch("./server-connection.json", { cache: "no-store", signal: AbortSignal.timeout(4000) });
+  if (!response.ok) return null;
+  const { publishedKnowledgeOrigin } = await response.json();
+  if (typeof publishedKnowledgeOrigin !== "string") return null;
+  const origin = new URL(publishedKnowledgeOrigin);
+  if (origin.protocol !== "https:" || origin.origin !== publishedKnowledgeOrigin) return null;
+  return new URL("/api/knowledge", origin).href;
+}
 
 const starters = [
   {
@@ -198,7 +217,9 @@ export default function FundSeaExperience() {
       try { local = readLocalTraining().entries; } catch { /* Keep consultation available if storage is unavailable. */ }
       if (active) setTraining(local);
       try {
-        const res = await fetch("/api/knowledge", { signal: AbortSignal.timeout(4000) });
+        const url = await publishedKnowledgeUrl();
+        if (!url) return;
+        const res = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", signal: AbortSignal.timeout(4000) });
         if (res.ok && res.headers.get("content-type")?.includes("application/json")) {
           const remote = parseTrainingStore(await res.json());
           if (active) setTraining([...new Map([...local, ...remote.entries].map(e => [e.id, e])).values()]);
@@ -239,7 +260,7 @@ export default function FundSeaExperience() {
     }
 
     (async () => {
-      for (const url of API_ENDPOINTS) {
+      for (const url of chatEndpoints()) {
         try {
           const res = await fetch(url, { method: "GET" });
           const ct = res.headers.get("content-type") || "";
@@ -472,8 +493,7 @@ export default function FundSeaExperience() {
     }
 
     // 2. 로컬/서버 AI 라우트(Ollama Gemma 4 & Gemini) 호출
-    const apiEndpoints = window.location.hostname.endsWith("github.io") ? [] : API_ENDPOINTS;
-    for (const apiUrl of apiEndpoints) {
+    for (const apiUrl of chatEndpoints()) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 45000);
@@ -535,7 +555,7 @@ export default function FundSeaExperience() {
     }
 
     // 3. 정적 프리뷰에서 직접 로컬 Ollama(127.0.0.1:11434) 호출
-    if (aiEngine === "ollama") {
+    if (aiEngine === "ollama" && isLocalPreview()) {
       try {
         const diag = freeDiagnosis(currentAnswers);
         const upcoming = nextQuestion(currentAnswers);
