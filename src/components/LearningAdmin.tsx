@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usesPublicPages } from "../public-site.mjs";
 import { ArrowDownToLine, ArrowLeft, ArrowUpRight, BookOpen, Check, CircleHelp, FileText, FlaskConical, LayoutDashboard, Plus, Search, Settings2, Trash2, Upload, Waves, X } from "lucide-react";
 import { CATEGORIES, EMPTY_TRAINING, matchTraining, parseTrainingStore, readLocalTraining, saveLocalTraining, TrainingEntry, TrainingStore } from "../engines/training";
 import { INITIAL_EVOLUTION_STATE, JeongchaegiEvolutionState } from "../engines/self-learning";
@@ -41,7 +42,7 @@ export default function LearningAdmin() {
   const editor = useRef<HTMLDialogElement>(null);
   const confirmation = useRef<HTMLDialogElement>(null);
   const current = tabs.find(t => t.id === tab)!;
-  const isGitHubPages = typeof window !== "undefined" && /(^|\.)github\.io$/i.test(window.location.hostname);
+  const isGitHubPages = usesPublicPages();
   const homeHref = typeof window !== "undefined" && /\.html$/.test(window.location.pathname) ? `${window.location.pathname}#diagnosis` : "./#diagnosis";
 
   useEffect(() => {

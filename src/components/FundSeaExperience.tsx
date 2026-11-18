@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usesPublicPages } from "../public-site.mjs";
 import {
   ArrowUp,
   ArrowUpRight,
@@ -57,10 +58,6 @@ type Message = {
   followUpHead?: boolean;
 };
 
-function usesPages() {
-  return window.location.hostname.endsWith(".github.io");
-}
-
 function isLocalPreview() {
   return window.location.protocol === "file:" || (
     ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname) && /\.html$/.test(window.location.pathname)
@@ -68,13 +65,13 @@ function isLocalPreview() {
 }
 
 function chatEndpoints() {
-  if (usesPages()) return [];
+  if (usesPublicPages()) return [];
   if (!isLocalPreview()) return ["/api/chat"];
   return ["/api/chat", "http://localhost:3057/api/chat", "http://localhost:3056/api/chat", "http://localhost:3055/api/chat"];
 }
 
 async function publishedKnowledgeUrl(): Promise<string | null> {
-  if (!usesPages()) return "/api/knowledge";
+  if (!usesPublicPages()) return "/api/knowledge";
   const response = await fetch("./server-connection.json", { cache: "no-store", signal: AbortSignal.timeout(4000) });
   if (!response.ok) return null;
   const { publishedKnowledgeOrigin } = await response.json();

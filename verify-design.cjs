@@ -12,14 +12,14 @@ function getChromium() {
   throw new Error('Install Playwright or set PLAYWRIGHT_MODULE to the installed package path.');
 }
 
-const site = 'https://mango7557-ui.github.io/policy-fund-sea/';
+const canonicalSite = 'https://barunfund.kr/';
+const sites = [canonicalSite, 'https://www.barunfund.kr/', 'https://mango7557-ui.github.io/policy-fund-sea/'];
 const docs = path.join(__dirname, 'docs');
 const mime = { html: 'text/html; charset=utf-8', js: 'text/javascript', css: 'text/css', json: 'application/json', webp: 'image/webp', png: 'image/png', jpg: 'image/jpeg', svg: 'image/svg+xml', mp4: 'video/mp4' };
 
-async function verify() {
-  const browser = await getChromium().launch({ headless: true, executablePath: process.env.CHROMIUM_EXECUTABLE });
+async function verifySite(browser, site) {
+  const page = await browser.newPage({ reducedMotion: 'reduce', locale: 'ko-KR', serviceWorkers: 'block' });
   try {
-    const page = await browser.newPage({ reducedMotion: 'reduce', locale: 'ko-KR', serviceWorkers: 'block' });
     page.setDefaultTimeout(12000);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -43,6 +43,9 @@ async function verify() {
 
     await page.goto(site);
     await page.getByRole('heading', { level: 1, name: /사업에 필요한 자금/ }).waitFor();
+    assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'), canonicalSite);
+    assert.equal(await page.locator('meta[property="og:url"]').getAttribute('content'), canonicalSite);
+    assert.equal(await page.locator('meta[property="og:image"]').getAttribute('content'), canonicalSite + 'bareun-brand.png');
     for (const width of [1440, 1280, 1024, 768, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Horizontal overflow at ' + width);
@@ -100,7 +103,16 @@ async function verify() {
     await page.getByRole('button', { name: /연결·백업/ }).click();
     assert.equal(await page.locator('input[type=password]').count(), 0);
     assert.deepEqual(errors, []);
-    console.log('Passed: static assets, six viewport widths, navigation, keyboard, theme, consultation, reports and admin.');
+    console.log('Passed for ' + site + ' (metadata, assets, six viewport widths, navigation, keyboard, theme, consultation, reports and admin).');
+  } finally {
+    await page.close();
+  }
+}
+
+async function verify() {
+  const browser = await getChromium().launch({ headless: true, executablePath: process.env.CHROMIUM_EXECUTABLE });
+  try {
+    for (const site of sites) await verifySite(browser, site);
   } finally {
     await browser.close();
   }

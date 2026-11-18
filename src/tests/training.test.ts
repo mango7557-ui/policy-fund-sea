@@ -61,7 +61,19 @@ describe("training knowledge", () => {
     const payload = { ...EMPTY_TRAINING, entries: [entry(), entry({ id: "draft", status: "draft" })] };
     expect((await PUT(request("PUT", undefined, payload))).status).toBe(200);
     expect((await (await GET(request())).json()).entries).toHaveLength(2);
-    expect((await (await publicKnowledge()).json()).entries.map((e: TrainingEntry) => e.id)).toEqual(["one"]);
+    expect((await (await publicKnowledge(new Request("http://localhost/api/knowledge"))).json()).entries.map((e: TrainingEntry) => e.id)).toEqual(["one"]);
     expect((await PUT(request("PUT", undefined, payload))).status).toBe(409);
+  });
+  it.each([
+    ["https://barunfund.kr", true],
+    ["https://www.barunfund.kr", true],
+    ["https://mango7557-ui.github.io", true],
+    ["https://other.github.io", false],
+    ["https://barunfund.kr.example.com", false],
+  ] as const)("checks the published knowledge origin %s", async (origin, allowed) => {
+    setup();
+    const response = await publicKnowledge(new Request("http://localhost/api/knowledge", { headers: { Origin: origin } }));
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe(allowed ? origin : null);
+    expect(response.headers.get("Vary")).toBe("Origin");
   });
 });

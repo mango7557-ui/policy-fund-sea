@@ -2,10 +2,11 @@ import { build, transform } from "esbuild";
 import { mkdtemp, readFile, readdir, rmdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
+import { publicOrigin } from "./src/public-site.mjs";
 
 export const siteTitle = "바른자금 | 기업 자금조달 진단과 상담";
 export const siteDescription = "기업의 자금 용도와 경영 상황을 바탕으로 바른자금에서 자금조달 방향, 판단 근거와 준비할 서류를 확인하세요.";
-const siteUrl = "https://mango7557-ui.github.io/policy-fund-sea/";
+const siteUrl = publicOrigin + "/";
 const themeInit = `(function(){try{var t=localStorage.getItem('bareunfund-theme')||localStorage.getItem('fundsea-theme');document.documentElement.dataset.theme=t==='dark'?'dark':'light'}catch(e){document.documentElement.dataset.theme='light'}})();`;
 const stylesheets = ["globals.css", "editorial.css", "admin.css", "maritime.css", "landing-entry.css", "landing-details.css"];
 
