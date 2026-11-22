@@ -111,3 +111,8 @@ html[data-theme] .plans-section .plan-card:not(.featured) { padding: clamp(24px,
   .casebook-answer dl { grid-template-columns: 1fr; gap: 3px; }
   .casebook-answer dd + dt { margin-top: 8px; }
 }
+
+.branch-result {font-size:13px; line-height:1.8; padding:18px 0; border-top:1px solid #a7c2d2; overflow-wrap:anywhere;}
+.branch-result h3 {font-size:18px; margin:0 0 10px;}
+.branch-result ul {padding-left:18px;}
+.branch-result small {display:block; font-size:11px;}

@@ -43,6 +43,7 @@ import {
 import { QuestionLibrary, ReportSamples } from "./DocumentTools";
 import { FundingEntry, SiteHeader } from "./HomepageEntry";
 import { FundingNavigator } from "./FundingNavigator";
+import { BusinessBranchFields } from "./BusinessBranchFields";
 import { FundingNeeds } from "./FundingNeeds";
 import { ConsultationCases } from "./ConsultationCases";
 import { matchTraining, parseTrainingStore, readLocalTraining, trainingPrompt, TrainingEntry, TRAINING_EVENT } from "../engines/training";
@@ -403,6 +404,16 @@ export default function FundSeaExperience() {
       };
     }
 
+    const branchResult = freeDiagnosis(currentAnswers).branch;
+    if (branchResult) {
+      return {
+        text: [branchResult.stage, branchResult.reason, branchResult.routes.join(" · "), branchResult.action,
+          branchResult.missing.length ? "다음으로 확인할 항목은 " + branchResult.missing[0] + "입니다. 기업 유형별 진단에서 알려주세요." : "",
+          branchResult.notice].filter(Boolean).join(" "),
+        source: branchResult.source,
+        links: [],
+      };
+    }
     const fallback = referenceReply(userText, currentAnswers, historySnapshot);
     const trimmedKey = customApiKey.trim();
     const knownSummary = summarizeKnownFacts(currentAnswers);
@@ -709,7 +720,8 @@ export default function FundSeaExperience() {
       )}\n사전 안내이며 승인·금액을 보장하지 않습니다.\n\n` +
       messages
         .map((m) => `${m.role === "user" ? "나" : "정책이"}: ${m.text}`)
-        .join("\n\n");
+        .join("\n\n") +
+      (result.branch ? "\n\n기업 유형별 진단\n" + JSON.stringify({ 입력: answers.branch, 결과: result.branch }, null, 2) : "");
     const url = URL.createObjectURL(
       new Blob([text], { type: "text/plain;charset=utf-8" })
     );
@@ -728,6 +740,7 @@ export default function FundSeaExperience() {
       <main id="main-content" tabIndex={-1}>
         <section className="sea-hero" id="diagnosis">
           <FundingEntry onStart={start} busy={busy} onTopic={(prompt) => { openConsultation(false); void send(prompt); }} />
+          <BusinessBranchFields answers={answers.branch || {}} onChange={branch => { setAnswers(previous => ({ ...previous, branch })); setDiagnosisStarted(true); setSaved(false); }} />
           <div className="workspace-label"><span><i /> 정책이 상담실</span><p>대표님의 이야기가, 진단의 시작입니다.</p><span>무료 사전 진단</span></div>
           <div className="workspace" id="consultation" role="region" aria-label="자금 상담" tabIndex={-1}>
             <section className="sea-chat" aria-label="정책이와 상담">
@@ -1063,9 +1076,17 @@ export default function FundSeaExperience() {
                   </p>
                 </div>
               </div>
+              {result.branch && <div className="branch-result" aria-live="polite">
+                <h3>{result.branch.stage}</h3><p>{result.branch.reason}</p>
+                <ul>{result.branch.routes.map(route => <li key={route}>{route}</li>)}</ul>
+                <p>{result.branch.action}</p>
+                {result.branch.missing.length > 0 && <p>추가 확인 · {result.branch.missing.join(" · ")}</p>}
+                {result.branch.expert && <p>전문가 검토 필요 · 현재 자동 배정은 준비 중입니다.</p>}
+                <small>{result.branch.source}<br />{result.branch.notice}</small>
+              </div>}
               <button
                 className="save-button"
-                disabled={!messages.length}
+                disabled={!messages.length && !result.branch}
                 onClick={download}
               >
                 <Download size={15} />

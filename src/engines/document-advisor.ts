@@ -1,3 +1,4 @@
+import { diagnoseBranch, BranchAnswers } from "./business-branches";
 import bank from "../data/master/question-bank.json";
 import rules from "../data/master/rules.json";
 
@@ -6,7 +7,7 @@ export const QUESTION_BANK = bank;
 export const POLICY_REFERENCES = rules.Institution_Rule_Index.slice(1).map(({ cells, row }) => ({ id: cells[0], institution: cells[1], subject: cells[2], criteria: cells[5], status: cells[6], date: cells[8], url: cells[9], note: cells[10], row }));
 export const PREFERENCE_REFERENCES = rules.Preferential_Factors.slice(1).map(({ cells }) => ({ id: cells[0], name: cells[2], evidence: cells[3], condition: cells[5], caution: cells[9] }));
 export type AnswerKey = "purpose" | "entity" | "operation" | "tax" | "overdue" | "credit" | "industry" | "ceo" | "related" | "finance" | "documents";
-export type Answers = Partial<Record<AnswerKey, string>>;
+export type Answers = Partial<Record<AnswerKey, string>> & { branch?: BranchAnswers };
 export type Question = { key: AnswerKey; text: string; choices: { value: string; label: string }[] };
 const q = (key: AnswerKey, text: string, options: [string, string][]): Question => ({ key, text, choices: options.map(([value, label]) => ({ value, label })) });
 export const DIAGNOSIS_QUESTIONS: Question[] = [
@@ -203,7 +204,8 @@ export function summarizeKnownFacts(answers: Answers): string {
 export function freeDiagnosis(answers: Answers) {
   const missing = DIAGNOSIS_QUESTIONS.filter(q => !answers[q.key] || answers[q.key] === "unknown").map(q => q.text);
   const blocked = answers.tax === "active" || answers.overdue === "active" || answers.operation === "closed" || answers.operation === "dormant" || answers.industry === "excluded";
-  const structure = answers.finance === "weak";
+  const branch = diagnoseBranch(answers.branch ? { ...answers.branch, recovery: answers.finance === "weak" ? "지속적 영업적자" : answers.branch.recovery } : {}, blocked || answers.credit === "review");
+  const structure = answers.finance === "weak" || Boolean(branch?.hold);
   const exceptional = answers.tax === "exception" || answers.overdue === "cleared" || answers.credit === "review" || answers.ceo === "review" || answers.related === "yes" || answers.entity === "prestartup" || answers.documents === "missing";
   const status = blocked ? "현재 곤란" : missing.length || exceptional || structure ? "추가 확인" : "검토 가능";
   const reasons: string[] = [];
@@ -215,7 +217,7 @@ export function freeDiagnosis(answers: Answers) {
   if (answers.documents === "missing") reasons.push("자동조회 장애·자료 누락은 진단 중단 대신 누락 자료만 대체 제출합니다.");
   if (!reasons.length) reasons.push(missing.length ? "아직 확인하지 않은 핵심 정보가 있습니다." : "응답 기준 기본 제한요인이 확인되지 않았습니다. 증빙·최신 공고 검증은 별도로 필요합니다.");
   const direction = blocked || structure ? "제한요인 해소·재기 또는 구조개선 경로 검토" : answers.purpose === "facility" ? "시설자금 방향 — 투자견적·자기자금·설치 주소 확인" : answers.purpose === "refinance" ? "대환 전용 공고 여부와 기존 대출 조건 확인" : "운전자금 방향 — 업종·규모·금융잔액 확인";
-  return { status, reasons, missing, direction, structure, complete: nextQuestion(answers) === null, amount: null, source: "고객 직접입력 · 증빙 미검증", referenceDate: DOCUMENT_VERSION, action: blocked || structure ? "부족자료와 개선사항을 먼저 정리하세요. 유료결제보다 보완이 우선입니다." : "최신 금융거래확인서·보증잔액·매출 자료와 공식 공고를 대조해 주세요." };
+  return { branch, status: branch?.stage || status, reasons, missing, direction: branch ? branch.stage + " — " + branch.reason : direction, structure, complete: nextQuestion(answers) === null, amount: null, source: "고객 직접입력 · 증빙 미검증", referenceDate: DOCUMENT_VERSION, action: branch ? branch.action : blocked || structure ? "부족자료와 개선사항을 먼저 정리하세요. 유료결제보다 보완이 우선입니다." : "최신 금융거래확인서·보증잔액·매출 자료와 공식 공고를 대조해 주세요." };
 }
 
 const normalize = (text: string) => text.toLowerCase().replace(/[^가-힣a-z0-9]/g, "");
