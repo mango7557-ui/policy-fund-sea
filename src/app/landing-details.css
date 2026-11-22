@@ -116,3 +116,19 @@ html[data-theme] .plans-section .plan-card:not(.featured) { padding: clamp(24px,
 .branch-result h3 {font-size:18px; margin:0 0 10px;}
 .branch-result ul {padding-left:18px;}
 .branch-result small {display:block; font-size:11px;}
+
+.consultation-report-dialog {width:min(820px,calc(100vw - 32px));max-height:90dvh;padding:28px;border:1px solid #d6e0e8;border-radius:14px;background:white;color:#102b55;overflow:auto;line-height:1.8;}
+.consultation-report-dialog::backdrop {background:#102b5580;}
+.consultation-report-dialog h2 {font-size:26px;line-height:1.4;}
+.consultation-report-dialog h3 {font-size:18px;border-bottom:1px solid #d6e0e8;padding-bottom:10px;margin-top:30px;}
+.consultation-report-dialog dt {font-weight:650;}
+.consultation-report-dialog dd {margin:0 0 12px;}
+.consultation-report-dialog p {white-space:pre-wrap;overflow-wrap:anywhere;}
+.report-actions {display:flex;flex-wrap:wrap;gap:10px;}
+.report-actions button {padding:10px 16px;border:1px solid #d6e0e8;border-radius:6px;background:#f5f7fa;color:#102b55;cursor:pointer;}
+@media print {
+  body:has(.consultation-report-dialog[open]) {visibility:hidden;}
+  body:has(.consultation-report-dialog[open]) .consultation-report-dialog {visibility:visible;position:absolute;inset:0;width:100%;max-height:none;overflow:visible;border:0;padding:0;margin:0;}
+  .consultation-report-dialog::backdrop,.consultation-report-dialog .report-actions {display:none;}
+  .consultation-report-dialog h3 {break-after:avoid;}
+}

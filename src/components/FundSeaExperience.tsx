@@ -44,6 +44,7 @@ import { QuestionLibrary, ReportSamples } from "./DocumentTools";
 import { FundingEntry, SiteHeader } from "./HomepageEntry";
 import { FundingNavigator } from "./FundingNavigator";
 import { BusinessBranchFields } from "./BusinessBranchFields";
+import { ConsultationReport } from "./ConsultationReport";
 import { FundingNeeds } from "./FundingNeeds";
 import { ConsultationCases } from "./ConsultationCases";
 import { matchTraining, parseTrainingStore, readLocalTraining, trainingPrompt, TrainingEntry, TRAINING_EVENT } from "../engines/training";
@@ -1084,6 +1085,7 @@ export default function FundSeaExperience() {
                 {result.branch.expert && <p>전문가 검토 필요 · 현재 자동 배정은 준비 중입니다.</p>}
                 <small>{result.branch.source}<br />{result.branch.notice}</small>
               </div>}
+              <ConsultationReport answers={answers} messages={messages} busy={busy} />
               <button
                 className="save-button"
                 disabled={!messages.length && !result.branch}
