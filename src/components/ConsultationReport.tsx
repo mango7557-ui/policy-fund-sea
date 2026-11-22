@@ -1,4 +1,5 @@
 "use client";
+import { MemberReports } from "./MemberReports";
 import { useEffect, useRef, useState } from "react";
 import { Answers } from "../engines/document-advisor";
 import { createConsultationReport, ConsultationReport as Report, ReportMessage, reportText } from "../engines/consultation-report";
@@ -21,9 +22,10 @@ export function ConsultationReport({ answers, messages, busy }: { answers: Answe
     <button className="save-button" type="button" disabled={busy || !messages.some(m => m.role === "user")} onClick={() => setReport(createConsultationReport(answers, messages))}>
       상담 보고서 자동 생성
     </button>
+    <MemberReports report={report} onOpen={setReport} />
     <dialog className="consultation-report-dialog" ref={dialog} onClose={() => setReport(null)} aria-labelledby="consultation-report-title">
       {report && <>
-        <div className="report-actions"><button type="button" onClick={() => window.print()}>인쇄 · PDF 저장</button><button type="button" onClick={download}>보고서 내려받기</button><button type="button" onClick={() => dialog.current?.close()}>닫기</button></div>
+        <MemberReports report={report} onOpen={setReport} /><div className="report-actions"><button type="button" onClick={() => window.print()}>인쇄 · PDF 저장</button><button type="button" onClick={download}>보고서 내려받기</button><button type="button" onClick={() => dialog.current?.close()}>닫기</button></div>
         <article>
           <p>바른자금 · 사전 상담 보고서</p>
           <h2 id="consultation-report-title">{report.title}</h2>
