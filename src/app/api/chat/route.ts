@@ -15,6 +15,7 @@ import {
   POLICY_REFERENCES,
   PREFERENCE_REFERENCES,
   referenceReply,
+  conversationReply,
   searchQuestions,
   summarizeKnownFacts,
 } from "../../../engines/document-advisor";
@@ -284,13 +285,7 @@ export async function POST(req: NextRequest) {
     const rawAnswers: Answers =
       body?.answers && typeof body.answers === "object" ? body.answers : {};
     // 대화 히스토리와 이번 메시지에서 파악된 기업 조건을 자동으로 누적 추출
-    let answers: Answers = { ...rawAnswers };
-    for (const h of history) {
-      if (h.role === "user") {
-        answers = extractAnswersFromText(answers, h.text);
-      }
-    }
-    answers = extractAnswersFromText(answers, message);
+    const answers = extractAnswersFromText(rawAnswers, message, history.at(-1)?.text);
 
     const clientApiKey =
       typeof body?.clientApiKey === "string" ? body.clientApiKey : undefined;
@@ -337,7 +332,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const fallback = referenceReply(message, answers);
+    const conversational = conversationReply(message, answers, history);
+    if (conversational) return jsonWithCors({ text: conversational, source: "정책이 상담", links: [], updatedAnswers: answers, evolutionState: evolvedState, provider: "rule-fallback" });
+    const fallback = referenceReply(message, answers, history);
     const hits = searchQuestions(message);
     const diag = freeDiagnosis(answers);
     const upcomingQ = nextQuestion(answers);
@@ -362,17 +359,7 @@ export async function POST(req: NextRequest) {
 
     const systemInstruction = [
       "당신은 정책자금 상담을 돕는 AI 도우미 '정책이'입니다. 첫 문장에서 방금 들은 구체적인 사정이나 걱정을 짧게 받아 주세요. 감정을 단정하지 말고 질문에 답한 뒤 필요한 한 가지만 물어보세요. 실제 사람이나 특정 경력의 전문가라고 주장하지 마세요.",
-      "딱딱한 AI 챗봇이나 콜센터 상담원이 아니라, 오랜 단골 대표님과 차 한잔 마시며 카톡으로 다정하게 이야기 나누는 진짜 사람처럼 대화하세요.",
-      "",
-      "[인간적인 대화를 위한 핵심 규칙]",
-      "사용자의 마지막 질문에 먼저 구체적으로 답하세요. 답변에 필요한 경우에만 관련 질문을 하나 하세요. 질문을 무시하고 진단을 진행하지 마세요. 알 수 없는 정보는 모른다고 말하세요.",
-      isFirstTurn
-        ? "1. 처음 인사는 '아, 대표님 반갑습니다!'처럼 다정하게 시작하되, 회사 이름이나 직함을 대는 기계적인 자기소개는 절대 하지 마세요."
-        : "1. 이미 대화가 진행 중이니 '안녕하세요', '정책이입니다' 같은 인사는 절대 반복하지 말고 바로 대표님 말씀에 따뜻하게 맞장구치세요.",
-      "2. 너무 직선적이거나 사무적인 말투('~를 알려주세요', '~를 확인해야 합니다', '검토가 가능합니다') 대신, 사람 냄새 나는 부드러운 구어체('아, 그러셨군요!', '그 부분 때문에 마음고생 꽤 하셨겠어요', '~보시면 훨씬 수월하실 거예요', '혹시 ~는 어떠세요?')로 말씀하세요.",
-      "3. 번호 매기기(1., 2.), 불릿 기호(-, •), 굵은 글씨(**)는 절대 쓰지 마세요.",
-      "4. 문단을 2개로 쪼개지 말고, 하나의 자연스러운 말풍선(3~4문장) 안에서 대표님 상황에 먼저 진심으로 공감하고 핵심 조언을 쉽게 풀어드린 뒤, 마지막 문장에서 대화가 이어지도록 부드러운 질문을 하나 건네세요. ('아, 그러시군요!' 같은 추임새를 문장 중간에 중복해서 쓰지 마세요.)",
-      "",
+      "직전 질문을 기준으로 짧은 답의 뜻을 이해하고, 사용자가 정정한 사실을 우선하세요. 용어를 되묻거나 화제를 바꾸면 지금 요청한 내용을 먼저 답하세요. 공감을 위한 감탄사나 마무리 질문은 반복하지 마세요.",
       buildEvolutionPromptContext(evolvedState),
       trainingPrompt(training, message),
       "",

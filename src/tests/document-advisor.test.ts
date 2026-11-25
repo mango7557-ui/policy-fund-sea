@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { QUESTION_BANK, POLICY_REFERENCES, PREFERENCE_REFERENCES, DIAGNOSIS_QUESTIONS, Answers, answerQuestion, nextQuestion, freeDiagnosis, searchQuestions, referenceReply, collectionRoute, reportReadiness, extractAnswersFromText, ensureEndsWithFollowUpQuestion } from "../engines/document-advisor";
+import { conversationReply, QUESTION_BANK, POLICY_REFERENCES, PREFERENCE_REFERENCES, DIAGNOSIS_QUESTIONS, Answers, answerQuestion, nextQuestion, freeDiagnosis, searchQuestions, referenceReply, collectionRoute, reportReadiness, extractAnswersFromText, ensureEndsWithFollowUpQuestion } from "../engines/document-advisor";
 import manifest from "../data/master/manifest.json";
 import samples from "../data/master/sample-cases.json";
 
@@ -87,4 +87,14 @@ it("acknowledges the sole proprietor and follows the stated expense on the next 
   expect(referenceReply(first).text).toMatch(/^개인사업.*운영비/);
   const next = referenceReply("월세가 급해요", extractAnswersFromText({}, first));
   expect(next.text).toMatch(/^월세.*사업장을 운영/);
+});
+
+it("follows a correction, a contextual date, and a natural closing", () => {
+  const fixed = extractAnswersFromText({purpose: "facility"}, "기계 말고 월세요");
+  expect(fixed.purpose).toBe("working");
+  expect(conversationReply("기계 말고 월세요", fixed, [])).toContain("바로잡았어요");
+  const history = [{role: "assistant" as const, text: "월세는 언제까지 필요하세요?"}];
+  expect(conversationReply("다음 주 금요일이요", fixed, history)).toContain("다음 주 금요일까지");
+  expect(conversationReply("고마워요", fixed, history)).not.toContain("?");
+  expect(extractAnswersFromText({ purpose: "working", entity: "sole", operation: "active" }, "네", "설명이 더 필요하세요?").tax).toBeUndefined();
 });

@@ -26,6 +26,7 @@ import {
   nextQuestion,
   freeDiagnosis,
   referenceReply,
+  conversationReply,
   DOCUMENT_VERSION,
   collectionRoute,
   extractAnswersFromText,
@@ -375,6 +376,8 @@ export default function FundSeaExperience() {
       };
     }
 
+    const conversational = conversationReply(userText, currentAnswers, historySnapshot);
+    if (conversational) return { text: conversational, source: "정책이 상담", links: [] };
     const guideTopic = guide.find(item => item.question === userText.trim());
     if (guideTopic) {
       const risk = freeDiagnosis(currentAnswers);
@@ -382,7 +385,7 @@ export default function FundSeaExperience() {
         source: "2027 경영지원서비스 가이드북 " + guideTopic.pages + "쪽", links: [] };
     }
     const branchResult = freeDiagnosis(currentAnswers).branch;
-    if (branchResult) {
+    if (branchResult && (branchResult.hold || /진단|추천|조달 방향/.test(userText))) {
       return {
         text: [branchResult.stage, branchResult.reason, branchResult.routes.join(" · "), branchResult.action,
           branchResult.missing.length ? "다음으로 확인할 항목은 " + branchResult.missing[0] + "입니다. 기업 유형별 진단에서 알려주세요." : "",
@@ -525,7 +528,7 @@ export default function FundSeaExperience() {
             messages: [
               {
                 role: "system",
-                content: `당신은 다정하고 인간적인 정책자금 전문 상담사 '정책이'입니다. 문단을 나누지 말고 하나의 자연스러운 말풍선(3~4문장) 안에서 대표님 말씀에 공감하고 쉽게 설명한 뒤 마지막 문장에서 다음 질문("${upcoming?.text ?? "추가로 궁금하신 점이 있으신가요?"}")을 부드럽게 물어보세요. 이미 확인된 정보(${knownSummary})는 중복해서 묻지 마세요. 현재 상태: ${diag.status}\n${evoContext}`,
+                content: `당신은 다정하고 인간적인 정책자금 전문 상담사 '정책이'입니다. 마지막 발언의 의도를 먼저 살피세요. 짧은 답은 직전 질문에 연결하고, 정정하면 갱신하고, 설명을 원하면 먼저 답하세요. 추가 정보가 꼭 필요할 때만 한 가지를 물어보세요. 이미 확인된 정보(${knownSummary})는 중복해서 묻지 마세요. 현재 상태: ${diag.status}\n${evoContext}`,
               },
               ...historySnapshot.slice(-6).map((t) => ({
                 role: t.role === "assistant" ? "assistant" : "user",
@@ -631,7 +634,7 @@ export default function FundSeaExperience() {
     if (/시설|설비|공장|확장|기계/.test(text)) setPurpose("시설·사업 확장");
     else if (/운전|인건비|원재료|운영|월세/.test(text)) setPurpose("운영·운전자금");
 
-    const updatedAnswers = extractAnswersFromText(answers, text);
+    const updatedAnswers = extractAnswersFromText(answers, text, messages.at(-1)?.text);
     setAnswers(updatedAnswers);
 
     const { nextState: nextEvo, newlyLearned } = evolveFromUserMessage(
@@ -920,7 +923,7 @@ export default function FundSeaExperience() {
                   </div>
                 )}
               </div>
-              {messages.length > 0 && question && !busy && (
+              {messages.length > 0 && question && !busy && /[?？]|알려주세요|들려주세요/.test(messages.at(-1)?.text || "") && (
                 <div className="nbq-panel">
                   <div>
                     {question.choices.map((choice) => (

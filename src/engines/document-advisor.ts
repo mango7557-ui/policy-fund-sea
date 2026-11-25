@@ -36,8 +36,9 @@ export function answerQuestion(answers: Answers, key: AnswerKey, value: string):
  * 대표님이 채팅창에 자연어로 말씀하신 내용에서 진단 항목을 자동으로 추출·누적하여
  * 이미 답한 질문을 다시 묻지 않고 대화가 계속 다음 단계로 이어지게 한다.
  */
-export function extractAnswersFromText(current: Answers, rawText: string): Answers {
-  const t = rawText.trim();
+export function extractAnswersFromText(current: Answers, rawText: string, previousReply = ""): Answers {
+  const original = rawText.trim();
+  const t = original.replace(/^[^.!?]*(?:말고|아니라|아니고)\s*(?=\S)/, "");
   if (!t) return current;
   // 질문에 등장한 조건을 고객이 사실로 진술한 것으로 기록하지 않는다.
   if (/[?？]|무엇|뭐가|어떻게|어떤|가능한가|필요한가|되나요|있나요|할까요/.test(t)) {
@@ -52,14 +53,14 @@ export function extractAnswersFromText(current: Answers, rawText: string): Answe
     next.purpose = "facility";
   } else if (/대환|갈아타|고금리/.test(t)) {
     next.purpose = "refinance";
-  } else if (/운전|운영|인건비|급여|월급|원재료|재료비|자재|임대료|월세|재고/.test(t)) {
+  } else if (/운전자금|운영비|운영자금|인건비|급여|월급|원재료|재료비|자재|임대료|월세|재고/.test(t)) {
     next.purpose = "working";
   }
 
   // 2. 사업자 형태 (entity)
   if (/법인|주식회사|\(주\)|㈜/.test(t)) {
     next.entity = "corporation";
-  } else if (/개인사업자|개인\s*사업|자영업|1인\s*사업|소상공인|식당|카페|매장|가게/.test(t)) {
+  } else if (/개인사업자|개인\s*사업|자영업|1인\s*사업/.test(t)) {
     next.entity = "sole";
   } else if (/예비\s*창업|창업\s*준비|사업자\s*내기\s*전/.test(t)) {
     next.entity = "prestartup";
@@ -71,7 +72,7 @@ export function extractAnswersFromText(current: Answers, rawText: string): Answe
   } else if (/휴업/.test(t)) {
     next.operation = "dormant";
   } else if (/정상\s*영업|영업\s*중|운영\s*중|가동\s*중|하고\s*있|년\s*됐|년차|매출/.test(t)) {
-    next.operation = next.operation ?? "active";
+    next.operation = "active";
   }
 
   // 4. 세금 체납 (tax)
@@ -115,14 +116,14 @@ export function extractAnswersFromText(current: Answers, rawText: string): Answe
 
   // 9. 현재 질문(nextQuestion)에 대해 짧은 긍정/부정으로 답한 경우 문맥 반영
   const currentPending = nextQuestion(current);
-  if (currentPending) {
+  if (currentPending && previousReply.includes(formatHumanFollowUpQuestion(current))) {
     if (currentPending.key === "operation" && /^(네|예|정상|잘\s*돌아가요|영업중이에요)/.test(t)) {
       next.operation = "active";
-    } else if (currentPending.key === "tax" && /^(네|없어요|없습니다|깨끗해요|완납)/.test(t)) {
+    } else if (currentPending.key === "tax" && /^(없어요|없습니다|깨끗해요|완납)/.test(t)) {
       next.tax = "none";
-    } else if (currentPending.key === "overdue" && /^(네|없어요|없습니다|정상)/.test(t)) {
+    } else if (currentPending.key === "overdue" && /^(없어요|없습니다|정상)/.test(t)) {
       next.overdue = "none";
-    } else if (currentPending.key === "credit" && /^(네|없어요|없습니다|해당\s*없)/.test(t)) {
+    } else if (currentPending.key === "credit" && /^(없어요|없습니다|해당\s*없)/.test(t)) {
       next.credit = "none";
     } else if (currentPending.key === "ceo" && /^(네|예|맞아요|직접|제가)/.test(t)) {
       next.ceo = "yes";
@@ -298,6 +299,46 @@ export function ensureEndsWithFollowUpQuestion(
   }
 
   return singleParagraph;
+}
+
+type ConversationTurn = { role: "user" | "assistant"; text: string };
+
+export function conversationReply(query: string, answers: Answers, history: ConversationTurn[]): string | undefined {
+  const words = query.trim().replace(/[.!?~…]+$/, "");
+  const previous = history.filter(m => m.role === "assistant").at(-1)?.text || "";
+  const purpose = { working: "운영비", facility: "기계·시설 마련", refinance: "기존 대출의 이자 부담 줄이기" }[answers.purpose as "working" | "facility" | "refinance"];
+  if (/^(고마워요?|감사합니다|고맙습니다|고마워|감사해요|잘 알겠어요)$/.test(words))
+    return "도움이 됐다니 다행이에요. 나중에 궁금한 게 생기면 여기서 이어서 이야기해요.";
+  if (/^(잠깐만요?|잠시만요?|나중에 할게요?|오늘은 여기까지|그만할래요?)$/.test(words))
+    return "네, 여기서 잠시 멈출게요.";
+  if (/(요약|정리해|정리해줘|뭐라고 했|어디까지)/.test(words) && !/서류|공고|절차|상품|준비물/.test(words)) {
+    const facts = DIAGNOSIS_QUESTIONS.flatMap(q => {
+      const value = q.choices.find(c => c.value === answers[q.key]);
+      return value ? [value.label] : [];
+    });
+    return facts.length ? "지금까지 알려주신 내용을 모으면 이래요.\n" + facts.map(f => "· " + f).join("\n") : "아직 구체적으로 알려주신 사업 상황은 없어요. 궁금하신 것부터 이야기해 주세요.";
+  }
+  if (/말고|아니라|아니고/.test(words) && purpose && /월세|임대료|운영비|기계|설비|대환|인건비/.test(words) && !/[?？]/.test(query))
+    return `알겠어요. 자금 용도는 ${purpose} 쪽으로 바로잡았어요. ${formatHumanFollowUpQuestion(answers)}`;
+  if (/^(왜요|그건 왜|왜 물어봐요|왜 물어보세요|왜 궁금해요)$/.test(words)) {
+    if (/체납|국세|지방세/.test(previous)) return "세금 납부 상태에 따라 먼저 확인할 공고 조건이나 준비 서류가 달라질 수 있어서 여쭤봤어요. 지금 정확히 모르시면 나중에 확인해도 괜찮아요.";
+    if (/월세|운영비|기계|용도/.test(previous)) return "돈을 어디에 쓰실지 알면 필요한 서류를 좁힐 수 있어서예요. 예를 들어 기계를 살 때는 견적서를, 운영비를 마련할 때는 매출이나 지출 자료를 먼저 살펴봐요.";
+  }
+  const deadline = words.match(/(?:오늘|내일|모레|이번\s*주|다음\s*주|이달\s*말|이번\s*달\s*말)(?:\s*[월화수목금토일]요일)?|(?:\d{1,2}월\s*)?\d{1,2}일/);
+  if (deadline && /날짜|언제까지|지급일/.test(previous) && !/[?？]/.test(query))
+    return `${deadline[0]}까지 필요하시군요. 그날에 맞출 수 있을지는 접수와 심사 일정을 확인해야 해요. 지금 마련해야 하는 금액은 대략 어느 정도인가요?`;
+  const amount = words.match(/(?:[\d,.]+\s*(?:천만|백만|십만|만|천|억)?|[한두세네일이삼사오육칠팔구십백천]+만)\s*원/);
+  if (amount && /금액|얼마/.test(previous) && !/[?？]/.test(query))
+    return `필요한 금액은 ${amount[0]} 정도군요. ${purpose ? purpose + "에 쓰실 금액으로 보고 이어갈게요." : "어디에 쓰실지에 따라 살펴볼 방향이 달라져요."} ${formatHumanFollowUpQuestion(answers)}`;
+  if (/쉽게|무슨 뜻|무슨 말|뜻이 뭐/.test(words)) {
+    const topic = /운전자금|시설자금|대환/.test(words) ? words : previous;
+    if (/운전자금/.test(topic)) return "운전자금은 사업을 계속 돌리는 데 쓰는 돈이에요. 가게라면 이번 달 월세, 직원 급여, 재료를 살 돈이 여기에 들어가요.";
+    if (/시설자금/.test(topic)) return "시설자금은 오래 쓸 장비나 시설을 갖추는 데 드는 돈이에요. 빵집에서 오븐을 새로 사는 비용을 떠올리시면 돼요.";
+    if (/대환/.test(topic)) return "대환은 새 대출로 기존 대출을 갚는 거예요. 이자와 수수료를 같이 살펴봐야 실제 부담이 줄어드는지 알 수 있어요.";
+  }
+  if (/^(너무 |조금 |좀 )?(막막해요?|답답해요?|걱정돼요?|무서워요|힘들어요)$/.test(words))
+    return purpose ? `${purpose} 문제로 마음이 무거우시군요. 지금 가장 부담되는 건 필요한 금액인가요, 돈을 마련해야 하는 날짜인가요?` : "막막할 때는 어디서부터 말해야 할지도 어렵죠. 지금 가장 마음에 걸리는 일 하나만 들려주실래요?";
+  return undefined;
 }
 
 export function referenceReply(query: string, currentAnswers: Answers = {}, history: { role: "user" | "assistant"; text: string }[] = []) {
