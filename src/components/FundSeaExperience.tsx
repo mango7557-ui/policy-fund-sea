@@ -174,15 +174,7 @@ function nowTimeLabel(): string {
   }
 }
 
-function splitIntoHumanBubbles(fullText: string): string[] {
-  // 2개 말풍선으로 나뉘어 어색해지지 않도록 한 호흡의 자연스러운 단일 말풍선으로 정리
-  const singleBubble = fullText
-    .replace(/\*\*/g, "")
-    .replace(/\n+/g, " ")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-  return [singleBubble];
-}
+
 
 export default function FundSeaExperience() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -338,49 +330,26 @@ export default function FundSeaExperience() {
       prev.map((m) => (m.unread ? { ...m, unread: false } : m))
     );
 
-    const bubbles = splitIntoHumanBubbles(reply.text);
-    const reducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    for (let bIdx = 0; bIdx < bubbles.length; bIdx++) {
-      if (activeRunId.current !== runId) return;
-      const chunkText = bubbles[bIdx];
-      const msgId = `ai-${runId}-${bIdx}`;
-      const isLastBubble = bIdx === bubbles.length - 1;
-
-      if (bIdx > 0) {
-        setBusy(true);
-        setTypingStatusText("정책이가 이어서 입력하고 있어요...");
-        await new Promise((r) => setTimeout(r, reducedMotion ? 40 : 420));
-      }
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: msgId,
-          role: "assistant",
-          text: reducedMotion ? chunkText : "",
-          time: nowTimeLabel(),
-          followUpHead: bIdx > 0,
-          source: isLastBubble ? reply.source : undefined,
-          links: isLastBubble ? reply.links : undefined,
-        },
-      ]);
-
-      if (!reducedMotion) {
-        const stepSize = Math.max(2, Math.ceil(chunkText.length / 28));
-        for (let i = stepSize; i <= chunkText.length; i += stepSize) {
-          if (activeRunId.current !== runId) return;
-          const partial = chunkText.slice(0, i);
-          setMessages((prev) =>
-            prev.map((m) => (m.id === msgId ? { ...m, text: partial } : m))
-          );
-          await new Promise((r) => setTimeout(r, 18));
+    const text = reply.text.replace(/\*\*/g, "").trim();
+    const characters = Array.from(text);
+    const instant = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const id = `ai-${runId}`;
+    setMessages(prev => [...prev, {
+      id, role: "assistant", text: instant ? text : "", time: nowTimeLabel(),
+      source: reply.source, links: reply.links,
+    }]);
+    if (!instant) {
+      // Short replies unfold syllable by syllable. Long replies stay readable without a long wait.
+      const stride = Math.max(1, Math.ceil(characters.length / 180));
+      let visible = "";
+      for (let offset = 0; offset < characters.length; offset += stride) {
+        if (activeRunId.current !== runId) return;
+        visible += characters.slice(offset, offset + stride).join("");
+        const partial = visible;
+        setMessages(prev => prev.map(m => m.id === id ? { ...m, text: partial } : m));
+        if (offset + stride < characters.length) {
+          await new Promise(resolve => setTimeout(resolve, /[.!?。]$/.test(partial) ? 115 : 24));
         }
-        setMessages((prev) =>
-          prev.map((m) => (m.id === msgId ? { ...m, text: chunkText } : m))
-        );
       }
     }
     if (activeRunId.current === runId) setBusy(false);
@@ -444,7 +413,7 @@ export default function FundSeaExperience() {
               systemInstruction: {
                 parts: [
                   {
-                    text: `당신은 정책자금 상담 도우미 '정책이'입니다. 사용자의 마지막 질문에 먼저 구체적으로 답하고, 대화 맥락을 이어가세요. 모르는 내용은 모른다고 말하고 승인이나 금액을 단정하지 마세요. 과장된 공감이나 반복 인사 없이 간결하고 자연스러운 존댓말을 쓰세요. 답에 필요한 경우에만 질문을 하나 하세요. 이미 파악된 정보(${knownSummary})는 다시 묻지 마세요. 참고할 다음 진단 항목: ${upcoming?.text ?? "없음"}.\n${evoContext}`,
+                    text: `당신은 정책자금 상담 도우미 '정책이'입니다. 첫 문장은 방금 들은 구체적인 사정이나 걱정을 짧게 받아 주세요. 이어서 질문에 직접 답하고 다음에 필요한 한 가지만 물어보세요. 감정을 짐작해 단정하거나 같은 위로를 되풀이하지 마세요. 모르는 내용은 모른다고 말하고 승인이나 금액을 단정하지 마세요. 과장된 공감이나 반복 인사 없이 간결하고 자연스러운 존댓말을 쓰세요. 답에 필요한 경우에만 질문을 하나 하세요. 이미 파악된 정보(${knownSummary})는 다시 묻지 마세요. 참고할 다음 진단 항목: ${upcoming?.text ?? "없음"}.\n${evoContext}`,
                   },
                 ],
               },
@@ -854,7 +823,7 @@ export default function FundSeaExperience() {
                     </div>
                   </div>
                 ) : (
-                  <div className="message-list" aria-live="polite">
+                  <div className="message-list" aria-live="polite" aria-busy={busy}>
                     {messages.map((m) => (
                       <div
                         key={m.id}
@@ -879,7 +848,7 @@ export default function FundSeaExperience() {
                               <time>{m.time}</time>
                             </span>
                           )}
-                          <p>{m.text}</p>
+                          <p className={busy && m.role === "assistant" && m === messages[messages.length - 1] ? "reply-typing" : undefined}>{m.text}</p>
                           {m.role === "assistant" && (
                             <span className="bubble-meta">
                               <button
@@ -935,7 +904,7 @@ export default function FundSeaExperience() {
                         ) : null}
                       </div>
                     ))}
-                    {busy && (
+                    {busy && messages[messages.length - 1]?.role === "user" && (
                       <div className="thinking-bubble" role="status">
                         <span className="mini-avatar">
                           <img src="/jeongchaegi.svg" alt="" />

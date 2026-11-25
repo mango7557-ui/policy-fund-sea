@@ -81,3 +81,10 @@ describe("문서 기반 UAT 회귀검증", () => {
     expect(reportReadiness("L3", true, true, false).status).toBe("EXPERT_REVIEW_PENDING");
   });
 });
+
+it("acknowledges the sole proprietor and follows the stated expense on the next turn", () => {
+  const first = "개인 사업자인데 자금이 필요해?";
+  expect(referenceReply(first).text).toMatch(/^개인사업.*운영비/);
+  const next = referenceReply("월세가 급해요", extractAnswersFromText({}, first));
+  expect(next.text).toMatch(/^월세.*사업장을 운영/);
+});

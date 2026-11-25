@@ -40,7 +40,11 @@ export function extractAnswersFromText(current: Answers, rawText: string): Answe
   const t = rawText.trim();
   if (!t) return current;
   // 질문에 등장한 조건을 고객이 사실로 진술한 것으로 기록하지 않는다.
-  if (/[?？]|무엇|뭐가|어떻게|어떤|가능한가|필요한가|되나요|있나요|할까요/.test(t)) return current;
+  if (/[?？]|무엇|뭐가|어떻게|어떤|가능한가|필요한가|되나요|있나요|할까요/.test(t)) {
+    // Preserve an explicit self-introduction before the question, not hypothetical eligibility.
+    if (/^(?:(?:저는|제가|저)\s*)?개인\s*사업자(?:인데|이고)[,\s]/.test(t)) return { ...current, entity: "sole" };
+    return current;
+  }
   const next: Answers = { ...current };
 
   // 1. 자금 용도 (purpose)
@@ -48,7 +52,7 @@ export function extractAnswersFromText(current: Answers, rawText: string): Answe
     next.purpose = "facility";
   } else if (/대환|갈아타|고금리/.test(t)) {
     next.purpose = "refinance";
-  } else if (/운전|운영|인건비|급여|월급|원재료|자재|임대료|월세|재고/.test(t)) {
+  } else if (/운전|운영|인건비|급여|월급|원재료|재료비|자재|임대료|월세|재고/.test(t)) {
     next.purpose = "working";
   }
 
@@ -251,11 +255,11 @@ export function formatHumanFollowUpQuestion(currentAnswers: Answers = {}): strin
     case "entity":
       return "혹시 지금 사업자는 개인사업자로 내고 계세요, 아니면 법인으로 운영 중이세요?";
     case "operation":
-      return "지금 사업장은 계속 문 열고 영업 중이신지와 시작하신 지 대략 몇 년 정도 되셨는지도 편하게 알려주세요.";
+      return "지금도 사업장을 운영하고 계세요?";
     case "tax":
       return "혹시 국세나 지방세 중에 잠깐 밀려 있는 게 있으실까요? 분납 중이셔도 방법이 있으니 편하게 말씀해 주셔도 돼요.";
     case "overdue":
-      return "그럼 은행이나 카드 값, 보증기관 쪽에 현재 연체 걸려 있는 내역도 없으시죠?";
+      return "현재 납부가 늦어진 대출금이나 카드 대금이 있을까요?";
     case "credit":
       return "혹시 대표님 개인 신용점수나 예전 회생·신용회복 이력 때문에 마음 쓰이시는 부분은 없으세요?";
     case "industry":
@@ -314,17 +318,26 @@ export function referenceReply(query: string, currentAnswers: Answers = {}, hist
   // 자주 묻는 실무 질문은 진단 질문보다 먼저 직접 답한다.
   if (/(서류|서식|증빙|준비물)/.test(query) && /(무엇|뭐|어떤|준비|필요|알려)/.test(query)) {
     return {
-      text: "신청할 기관과 자금 종류에 따라 서류가 달라요. 보통 사업자등록증, 최근 매출을 확인할 자료, 국세·지방세 납세증명서와 기존 대출 관련 자료부터 살펴봅니다. 시설자금이라면 설비 견적서도 필요할 수 있어요. 어느 기관에 신청하실 예정인지 아시면 그에 맞춰 확인해 볼게요.",
+      text: "미리 서류를 챙겨 두고 싶으시군요. 신청할 기관과 자금 종류에 따라 준비물이 달라요. 보통 사업자등록증, 최근 매출을 확인할 자료, 국세·지방세 납세증명서와 기존 대출 관련 자료부터 살펴봅니다. 시설자금이라면 설비 견적서도 필요할 수 있어요. 어느 기관에 신청하실 예정인지 아시면 그에 맞춰 확인해 볼게요.",
       coreId: null,
       references: [],
     };
+  }
+
+  const extraDetail = /금리|한도|서류|조건|자격|공고|어디|대상|얼마|체납|연체|거절|폐업|신청|보증/.test(query);
+  if (!extraDetail && /개인\s*사업자|자영업/.test(query) && /자금|돈|대출/.test(query) && !updatedAnswers.purpose) {
+    return { text: "개인사업을 하시면서 자금이 필요해지셨군요. 어디서부터 알아볼지 같이 정리해 봐요. 지금 가장 먼저 쓰실 곳이 월세나 인건비 같은 운영비인가요, 아니면 기계나 시설을 마련하는 비용인가요?", coreId: null, references: [] };
+  }
+  if (!extraDetail && /월세|임대료|인건비|급여|재료비/.test(query)) {
+    const expense = query.match(/월세|임대료|인건비|급여|재료비/)![0];
+    return { text: `${expense} 마련이 먼저시군요. 지급일이 정해진 비용은 시기를 맞추는 게 중요하죠. 운전자금 방향으로 함께 살펴볼게요. ${followUpPrompt}`, coreId: null, references: [] };
   }
 
   // The source workbook marks answers unreviewed. It is an intent bank, not an approved answer bank.
   if (!match || match.score < .35) {
     const isQuestion = /[?？]|무엇|뭐|어떻게|왜|언제|어디|가능|알려/.test(query);
     if (isQuestion) return {
-      text: "말씀하신 질문은 기관과 공고에 따라 답이 달라질 수 있어요. 지금 가진 자료만으로는 정확히 답하기 어려워요. 신청하려는 기관이나 자금의 종류를 알려주시면 관련 내용을 함께 살펴볼게요.",
+      text: "그 부분을 확인하고 다음 단계를 정하고 싶으시군요. 지금 말씀만으로는 어느 기준이 적용될지 더 살펴봐야 해요. 가장 궁금한 건 신청할 수 있는지, 아니면 어떻게 준비하는지일까요?",
       coreId: null,
       references: [],
     };

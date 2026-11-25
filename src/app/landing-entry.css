@@ -284,3 +284,6 @@ html[data-theme] .sea-hero#diagnosis { padding-top: 0 !important; }
 }
 
 .bf-trust {margin:18px 0 0;color:#d0e5e4;font-size:13px;line-height:1.75;word-break:keep-all;}
+
+.reply-typing::after { content: ""; display: inline-block; height: 1em; margin-left: .14em; border-right: 2px solid currentColor; vertical-align: -.12em; }
+@media (prefers-reduced-motion: reduce) { .reply-typing::after { display: none; } }
