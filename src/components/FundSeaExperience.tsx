@@ -45,6 +45,7 @@ import { FundingEntry, SiteHeader } from "./HomepageEntry";
 import { FundingNavigator } from "./FundingNavigator";
 import { BusinessBranchFields } from "./BusinessBranchFields";
 import { ConsultationReport } from "./ConsultationReport";
+import guide from "../data/management-guide.json";
 import { FundingNeeds } from "./FundingNeeds";
 import { ConsultationCases } from "./ConsultationCases";
 import { matchTraining, parseTrainingStore, readLocalTraining, trainingPrompt, TrainingEntry, TRAINING_EVENT } from "../engines/training";
@@ -405,6 +406,12 @@ export default function FundSeaExperience() {
       };
     }
 
+    const guideTopic = guide.find(item => item.question === userText.trim());
+    if (guideTopic) {
+      const risk = freeDiagnosis(currentAnswers);
+      return { text: guideTopic.answer + (risk.branch?.hold || risk.structure ? " 현재 상담에서 확인된 위험요인에 따라 구조개선·전문가 검토를 우선하세요." : ""),
+        source: "2027 경영지원서비스 가이드북 " + guideTopic.pages + "쪽", links: [] };
+    }
     const branchResult = freeDiagnosis(currentAnswers).branch;
     if (branchResult) {
       return {
@@ -1098,6 +1105,11 @@ export default function FundSeaExperience() {
           </div>
           <QuestionLibrary onAsk={send} />
           <FundingNeeds />
+          <details className="document-tools"><summary>경영지원 가이드 · 분야별로 질문하기</summary>
+            <div className="document-tool-body"><p>프라임경영기술의 2027년 경영지원서비스 브로셔와 가이드북에서 상담 주제를 골랐습니다. 질문을 선택하면 정책이 상담과 보고서에 답변이 이어집니다.</p>
+            <div className="question-results">{guide.map(item => <button type="button" key={item.topic} disabled={busy} onClick={() => { openConsultation(false); void send(item.question); }}><span>{item.topic} · 가이드북 {item.pages}쪽</span>{item.question}</button>)}</div></div>
+          </details>
+          <details className="document-tools"><summary>공고 확인 기준</summary><div className="document-tool-body"><p>신청 전 기관의 공식 공고와 첨부 지침에서 대상 업종·지역, 접수기간, 금리·보증료, 중복수혜 제한을 확인하세요. 예산 소진형 사업은 현재 접수 여부를 별도로 확인해야 합니다.</p><p>가이드북에 소개된 2027년 사업은 탐색용 참고자료입니다. 실시간 공고 자동수집과 담당자 검증을 거친 상품 추천은 준비 중입니다.</p></div></details>
           <details className="document-tools"><summary>바른자금의 진단과 AI 이용 원칙</summary><div className="document-tool-body"><p>기업이 제공한 정보와 진단 규칙을 바탕으로 검토 방향과 근거를 정리합니다. AI는 결과를 이해하기 쉽게 설명하는 보조 도구이며, 자금 승인이나 신용등급을 결정하지 않습니다.</p><p>현재 입력 정보는 증빙 확인 전입니다. 외부 데이터 조회, NICE D&amp;B 연계, 자료 업로드와 전문가 연결은 아직 제공되지 않습니다. 체납, 자본잠식, 거절 이력이나 복잡한 조달은 전문가의 별도 검토가 필요합니다.</p><p>내부 진단은 금융기관의 심사나 신용평가 등급이 아니며, 실제 자격과 승인 여부는 해당 기관의 최신 기준과 심사로 결정됩니다.</p></div></details>
           <details className="document-tools">
             <summary>
@@ -1283,7 +1295,7 @@ export default function FundSeaExperience() {
           <section id="partners" aria-labelledby="partners-title">
             <Building2 size={23} aria-hidden="true" />
             <div><h2 id="partners-title">파트너사</h2>
-              <p>공개가 확정된 제휴사는 아직 없습니다. 제휴가 확인되면 기관명과 협력 분야를 함께 안내합니다.</p>
+              <p>운영사 제공 자료에 따르면 (사)한국중소상공인진흥협회 전문가 네트워크와 연계합니다. 재무·노무·특허·인증 등 분야별 검토가 필요한 경우 상담 범위를 먼저 확인합니다.</p>
             </div>
           </section>
         </div>

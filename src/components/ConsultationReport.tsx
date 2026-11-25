@@ -39,7 +39,7 @@ export function ConsultationReport({ answers, messages, busy }: { answers: Answe
           <h3>추가로 확인할 사항</h3><ul>{[...report.diagnosis.missing, ...(report.diagnosis.branch?.missing || [])].map((r, i) => <li key={i}>{r}</li>)}</ul>
           <h3>다음 행동</h3><p>{report.diagnosis.action}</p>
           {report.diagnosis.branch && <><ul>{report.diagnosis.branch.routes.map(r => <li key={r}>{r}</li>)}</ul><p>{report.diagnosis.branch.notice}</p></>}
-          <h3>상담 기록</h3>{report.messages.map((m,i) => <section key={i}><strong>{m.role === "user" ? "대표님" : "정책이"} · {m.time}</strong><p>{m.text}</p></section>)}
+          <h3>상담 기록</h3>{report.messages.map((m,i) => <section key={i}><strong>{m.role === "user" ? "대표님" : "정책이"} · {m.time}</strong><p>{m.text}</p>{m.source && <small>출처 · {m.source}</small>}</section>)}
           <p>자료 기준 · {report.diagnosis.referenceDate} / {report.diagnosis.source}</p>
         </article>
       </>}

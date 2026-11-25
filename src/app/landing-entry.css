@@ -282,3 +282,5 @@ html[data-theme] .sea-hero#diagnosis { padding-top: 0 !important; }
   .bf-topic input:checked + .bf-topic-face { outline: 2px solid Highlight; }
   .bf-topic input:checked + .bf-topic-face .bf-topic-check { color: Highlight; }
 }
+
+.bf-trust {margin:18px 0 0;color:#d0e5e4;font-size:13px;line-height:1.75;word-break:keep-all;}
