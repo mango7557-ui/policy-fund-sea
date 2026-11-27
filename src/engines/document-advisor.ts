@@ -117,6 +117,12 @@ export function extractAnswersFromText(current: Answers, rawText: string, previo
   // 9. 현재 질문(nextQuestion)에 대해 짧은 긍정/부정으로 답한 경우 문맥 반영
   const currentPending = nextQuestion(current);
   if (currentPending && previousReply.includes(formatHumanFollowUpQuestion(current))) {
+    if (/^(잘\s*)?(모르겠|모르겠어|모르|몰라|건너뛰|패스|확인해\s*봐야)/.test(t)) {
+      next[currentPending.key] = "unknown";
+      return next;
+    }
+    if (currentPending.key === "finance" && /적자|부채가 많/.test(t)) next.finance = "weak";
+    if (currentPending.key === "credit" && /회생|신용회복/.test(t) && !/없/.test(t)) next.credit = "review";
     if (currentPending.key === "operation" && /^(네|예|정상|잘\s*돌아가요|영업중이에요)/.test(t)) {
       next.operation = "active";
     } else if (currentPending.key === "tax" && /^(없어요|없습니다|깨끗해요|완납)/.test(t)) {
@@ -142,68 +148,12 @@ export function extractAnswersFromText(current: Answers, rawText: string, previo
 }
 
 export function summarizeKnownFacts(answers: Answers): string {
-  const parts: string[] = [];
-  if (answers.purpose) {
-    parts.push(
-      `자금용도=${
-        answers.purpose === "facility"
-          ? "시설·설비자금"
-          : answers.purpose === "refinance"
-          ? "대환자금"
-          : "운전자금"
-      }`
-    );
-  }
-  if (answers.entity) {
-    parts.push(
-      `사업자형태=${
-        answers.entity === "corporation"
-          ? "법인사업자"
-          : answers.entity === "sole"
-          ? "개인사업자"
-          : "예비창업자"
-      }`
-    );
-  }
-  if (answers.operation) {
-    parts.push(
-      `영업상태=${
-        answers.operation === "active"
-          ? "정상영업"
-          : answers.operation === "dormant"
-          ? "휴업"
-          : "폐업"
-      }`
-    );
-  }
-  if (answers.tax) {
-    parts.push(
-      `세금납부=${
-        answers.tax === "none"
-          ? "체납없음"
-          : answers.tax === "exception"
-          ? "분납·유예(예외검토)"
-          : "체납중"
-      }`
-    );
-  }
-  if (answers.overdue) {
-    parts.push(
-      `금융연체=${
-        answers.overdue === "none"
-          ? "연체없음"
-          : answers.overdue === "cleared"
-          ? "단기연체해소"
-          : "연체중"
-      }`
-    );
-  }
-  if (answers.related) {
-    parts.push(
-      `타사업체=${answers.related === "yes" ? "보유(분리검토)" : "없음"}`
-    );
-  }
-  return parts.length ? parts.join(", ") : "아직 파악된 기본정보 없음";
+  const facts = DIAGNOSIS_QUESTIONS.flatMap(q => {
+    const answer = answers[q.key];
+    if (!answer) return [];
+    return [q.text + " → " + (q.choices.find(c => c.value === answer)?.label || "추가 확인 필요")];
+  });
+  return facts.join(", ") || "아직 파악된 기본정보 없음";
 }
 
 export function freeDiagnosis(answers: Answers) {
@@ -274,6 +224,27 @@ export function formatHumanFollowUpQuestion(currentAnswers: Answers = {}): strin
     default:
       return "나중에 심사 들어가면 부가세 증명원이나 금융거래확인서 같은 서류가 필요한데, 그런 건 세무사님이나 홈택스에서 떼어보실 수 있으시죠?";
   }
+}
+
+export function interviewReply(answers: Answers, previous?: Answers) {
+  const next = nextQuestion(answers);
+  const result = freeDiagnosis(answers);
+  const changed = DIAGNOSIS_QUESTIONS.find(q => answers[q.key] && answers[q.key] !== previous?.[q.key]);
+  if (!next) {
+    const direction = answers.purpose === "unknown" && !result.branch && !result.direction.includes("제한요인")
+      ? "자금 용도를 확인한 뒤 검토 방향을 좁힐 수 있어요." : result.direction;
+    return ["지금까지 말씀해 주신 내용으로 정리해 볼게요.", direction,
+      ...result.reasons, result.missing.length ? "다시 확인할 내용 · " + result.missing.join(" / ") : "",
+      result.action, "상담 보고서 생성 버튼을 누르면 이 내용을 다시 보실 수 있어요."].filter(Boolean).join("\n");
+  }
+  let lead = "";
+  if (previous && changed) {
+    const value = answers[changed.key];
+    if (value === "unknown") lead = "그 부분은 나중에 확인할 내용으로 남겨둘게요.";
+    else if (changed.key === "purpose") lead = ({ working: "사업 운영에 쓸 돈이 필요하시군요.", facility: "시설 투자를 준비하고 계시는군요.", refinance: "기존 대출의 이자 부담을 줄이고 싶으시군요." })[value as "working" | "facility" | "refinance"] || "";
+    else if (value === "active" && ["tax", "overdue"].includes(changed.key)) lead = "말씀해 주셔서 고맙습니다. 이 부분은 신청 전에 별도로 확인하도록 표시할게요.";
+  }
+  return [lead, formatHumanFollowUpQuestion(answers)].filter(Boolean).join(" ");
 }
 
 export function ensureEndsWithFollowUpQuestion(

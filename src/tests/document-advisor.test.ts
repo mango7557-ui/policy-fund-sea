@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conversationReply, QUESTION_BANK, POLICY_REFERENCES, PREFERENCE_REFERENCES, DIAGNOSIS_QUESTIONS, Answers, answerQuestion, nextQuestion, freeDiagnosis, searchQuestions, referenceReply, collectionRoute, reportReadiness, extractAnswersFromText, ensureEndsWithFollowUpQuestion } from "../engines/document-advisor";
+import { interviewReply, conversationReply, QUESTION_BANK, POLICY_REFERENCES, PREFERENCE_REFERENCES, DIAGNOSIS_QUESTIONS, Answers, answerQuestion, nextQuestion, freeDiagnosis, searchQuestions, referenceReply, collectionRoute, reportReadiness, extractAnswersFromText, ensureEndsWithFollowUpQuestion } from "../engines/document-advisor";
 import manifest from "../data/master/manifest.json";
 import samples from "../data/master/sample-cases.json";
 
@@ -97,4 +97,21 @@ it("follows a correction, a contextual date, and a natural closing", () => {
   expect(conversationReply("다음 주 금요일이요", fixed, history)).toContain("다음 주 금요일까지");
   expect(conversationReply("고마워요", fixed, history)).not.toContain("?");
   expect(extractAnswersFromText({ purpose: "working", entity: "sole", operation: "active" }, "네", "설명이 더 필요하세요?").tax).toBeUndefined();
+});
+
+it("leads a consultation through each outstanding question and ends with an actionable result", () => {
+  let answers: Answers = {};
+  const seen = new Set();
+  while (nextQuestion(answers)) {
+    const q = nextQuestion(answers)!;
+    expect(seen.has(q.key)).toBe(false);
+    seen.add(q.key);
+    expect(interviewReply(answers)).toBeTruthy();
+    answers = answerQuestion(answers, q.key, q.key === "tax" ? "active" : q.choices[0].value);
+  }
+  expect(seen.size).toBe(11);
+  expect(interviewReply(answers)).toContain("제한요인");
+  expect(interviewReply(answers)).toContain("보고서");
+  const first = interviewReply({});
+  expect(extractAnswersFromText({}, "잘 모르겠어요", first).purpose).toBe("unknown");
 });

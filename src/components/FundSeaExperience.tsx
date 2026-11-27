@@ -24,6 +24,7 @@ import {
   Answers,
   AnswerKey,
   nextQuestion,
+  interviewReply,
   freeDiagnosis,
   referenceReply,
   conversationReply,
@@ -380,7 +381,7 @@ export default function FundSeaExperience() {
       )
     ) {
       return {
-        text: historySnapshot.length ? "네, 듣고 있어요. 이어서 궁금하신 점을 말씀해 주세요." : "안녕하세요. 정책자금에 관해 궁금하신 점을 편하게 말씀해 주세요.",
+        text: "안녕하세요. " + interviewReply(currentAnswers),
         source: "정책이 상담 가이드",
         links: [],
         isGreeting: true,
@@ -625,7 +626,12 @@ export default function FundSeaExperience() {
     workspace?.scrollIntoView({ behavior: reduceMotion ? "instant" : "smooth", block: "start" });
     (focusComposer ? field.current : workspace)?.focus({ preventScroll: true });
   };
-  const start = () => openConsultation(true);
+  const start = () => {
+    openConsultation(true);
+    if (busy || messages.at(-1)?.text.endsWith(formatHumanFollowUpQuestion(answers))) return;
+    setMessages(prev => [...prev, { id: "intro-" + Date.now(), role: "assistant",
+      text: interviewReply(answers), time: nowTimeLabel() }]);
+  };
 
   const chooseAnswer = async (key: AnswerKey, value: string, label: string) => {
     if (busy) return;
@@ -637,10 +643,7 @@ export default function FundSeaExperience() {
     setTypingStatusText("정책이가 내용을 확인하고 답장을 쓰고 있어요...");
 
     const runId = ++activeRunId.current;
-    const historySnapshot = messages.map((m) => ({
-      role: m.role,
-      text: m.text,
-    }));
+
 
     setMessages((prev) => [
       ...prev,
@@ -668,16 +671,7 @@ export default function FundSeaExperience() {
       setTimeout(() => setLearnToast(null), 4000);
     }
 
-    const reply = await requestAIReply(
-      label,
-      historySnapshot,
-      updated,
-      nextEvo,
-      runId
-    );
-    if ("streamed" in reply && reply.streamed) {
-      if (activeRunId.current === runId) setBusy(false);
-    } else await deliverHumanLikeAssistantTurn(runId, reply);
+    await deliverHumanLikeAssistantTurn(runId, { text: interviewReply(updated, answers), source: "바른자금 기본 진단" });
   };
 
   const send = async (value = input) => {
@@ -726,6 +720,21 @@ export default function FundSeaExperience() {
       },
     ]);
 
+    const changed = Object.keys(updatedAnswers).some(key => updatedAnswers[key as AnswerKey] !== answers[key as AnswerKey]);
+    const previousText = messages.at(-1)?.text || "";
+    const responding = question && previousText.endsWith(formatHumanFollowUpQuestion(answers));
+    const wantsResult = /^(?:지금까지|현재|중간)?\s*(?:결과|진단 결과)(?:를|가)?\s*(?:보여줘|알려줘|궁금해|볼래)?[요.!? ]*$/.test(text);
+    if (wantsResult || (changed && !/[?？]|어떻게|왜요|뭐예요/.test(text))) {
+      const diagnosis = freeDiagnosis(updatedAnswers);
+      const preview = wantsResult && nextQuestion(updatedAnswers)
+        ? "지금까지의 잠정 결과예요. " + diagnosis.status + " " + diagnosis.reasons.join(" ") + "\n" : "";
+      await deliverHumanLikeAssistantTurn(runId, { text: preview + interviewReply(updatedAnswers, answers), source: "바른자금 기본 진단" });
+      return;
+    }
+    if (responding && /^(네|예|아니요|아뇨|응|아니|맞아요)[.! ]*$/.test(text)) {
+      await deliverHumanLikeAssistantTurn(runId, { text: "뜻을 정확히 이해하고 싶어요. 아래 선택지에서 고르셔도 돼요. " + formatHumanFollowUpQuestion(answers) });
+      return;
+    }
     const reply = await requestAIReply(
       text,
       historySnapshot,
@@ -869,7 +878,7 @@ export default function FundSeaExperience() {
                       <Sparkles size={24} />
                     </span>
                     <p className="welcome-kicker">안녕하세요, 대표님!</p>
-                    <h2>무엇을 도와드릴까요?</h2>
+                    <h2>지금 어떤 일에 자금이 필요하세요?</h2>
                     <p>
                       옆자리 전문 상담사에게 물어보듯 편하게 말씀해 주세요.
                       <br />
@@ -983,8 +992,9 @@ export default function FundSeaExperience() {
                   </div>
                 )}
               </div>
-              {messages.length > 0 && question && !busy && /[?？]|알려주세요|들려주세요/.test(messages.at(-1)?.text || "") && (
+              {messages.length > 0 && question && !busy && !/잠시 멈출게요|이어서 이야기해요/.test(messages.at(-1)?.text || "") && (
                 <div className="nbq-panel">
+                  {!messages.at(-1)?.text.endsWith(formatHumanFollowUpQuestion(answers)) && <p>{formatHumanFollowUpQuestion(answers)}</p>}
                   <div>
                     {question.choices.map((choice) => (
                       <button
