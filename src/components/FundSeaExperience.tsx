@@ -68,8 +68,18 @@ function isLocalPreview() {
   );
 }
 
-function chatEndpoints() {
-  if (usesPublicPages()) return [];
+async function chatEndpoints(): Promise<string[]> {
+  if (usesPublicPages()) {
+    try {
+      const config = await fetch("./server-connection.json", { cache: "no-store", signal: AbortSignal.timeout(4000) });
+      if (!config.ok) return [];
+      const { chatOrigin } = await config.json();
+      if (chatOrigin !== "https://chat.barunfund.kr") return [];
+      return [chatOrigin + "/api/chat"];
+    } catch {
+      return [];
+    }
+  }
   if (!isLocalPreview()) return ["/api/chat"];
   return ["/api/chat", "http://localhost:3057/api/chat", "http://localhost:3056/api/chat", "http://localhost:3055/api/chat"];
 }
@@ -250,7 +260,7 @@ export default function FundSeaExperience() {
     }
 
     (async () => {
-      for (const url of chatEndpoints()) {
+      for (const url of await chatEndpoints()) {
         try {
           const res = await fetch(url, { method: "GET" });
           const ct = res.headers.get("content-type") || "";
@@ -341,7 +351,7 @@ export default function FundSeaExperience() {
     }]);
     if (!instant) {
       // Short replies unfold syllable by syllable. Long replies stay readable without a long wait.
-      const stride = Math.max(1, Math.ceil(characters.length / 180));
+      const stride = Math.max(1, Math.ceil(characters.length / 48));
       let visible = "";
       for (let offset = 0; offset < characters.length; offset += stride) {
         if (activeRunId.current !== runId) return;
@@ -349,7 +359,7 @@ export default function FundSeaExperience() {
         const partial = visible;
         setMessages(prev => prev.map(m => m.id === id ? { ...m, text: partial } : m));
         if (offset + stride < characters.length) {
-          await new Promise(resolve => setTimeout(resolve, /[.!?。]$/.test(partial) ? 115 : 24));
+          await new Promise(resolve => setTimeout(resolve, /[.!?。]$/.test(partial) ? 45 : 15));
         }
       }
     }
@@ -360,7 +370,8 @@ export default function FundSeaExperience() {
     userText: string,
     historySnapshot: { role: "user" | "assistant"; text: string }[],
     currentAnswers: Answers,
-    currentEvo: JeongchaegiEvolutionState
+    currentEvo: JeongchaegiEvolutionState,
+    runId: number
   ) => {
     const compact = userText.replace(/[!?.~,\s]/g, "");
     if (
@@ -451,27 +462,70 @@ export default function FundSeaExperience() {
     }
 
     // 2. 로컬/서버 AI 라우트(Ollama Gemma 4 & Gemini) 호출
-    for (const apiUrl of chatEndpoints()) {
+    for (const apiUrl of await chatEndpoints()) {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        const signal = AbortSignal.timeout(120000);
         const res = await fetch(apiUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            stream: aiEngine === "ollama",
             message: userText,
             history: historySnapshot,
             answers: currentAnswers,
             evolutionState: currentEvo,
             trainingEntries: training.filter(e => e.status === "published"),
             engine: aiEngine,
-            clientApiKey: trimmedKey || undefined,
+            clientApiKey: usesPublicPages() ? undefined : trimmedKey || undefined,
           }),
-          signal: controller.signal,
+          signal,
         });
-        clearTimeout(timeoutId);
 
         const contentType = res.headers.get("content-type") || "";
+        if (res.ok && res.body && contentType.includes("application/x-ndjson")) {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          const model = res.headers.get("X-Chat-Model") || "gemma4:latest";
+          const source = "Ollama (" + model + ")";
+          const id = "ai-" + runId;
+          const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          let text = "";
+          let buffer = "";
+          let complete = false;
+          const render = (visible: string) => {
+            if (activeRunId.current !== runId) return;
+            setMessages(prev => {
+              const reply: Message = { id, role: "assistant", text: visible, source, time: nowTimeLabel(), links: fallback.references };
+              return prev.some(m => m.id === id)
+                ? prev.map(m => m.id === id ? { ...m, text: visible } : m)
+                : [...prev.map(m => m.unread ? { ...m, unread: false } : m), reply];
+            });
+          };
+          try {
+            while (!complete && activeRunId.current === runId) {
+              const part = await reader.read();
+              buffer += decoder.decode(part.value, { stream: !part.done });
+              const lines = buffer.split("\n");
+              buffer = part.done ? "" : lines.pop() || "";
+              for (const line of lines.filter(line => line.trim())) {
+                const event = JSON.parse(line);
+                if (event.error) throw new Error("generation interrupted");
+                text += event.message?.content || "";
+                complete = event.done === true;
+              }
+              if (text && (!reducedMotion || complete)) render(text);
+              if (part.done) break;
+            }
+            if (!complete || !text) throw new Error("incomplete reply");
+            if (activeRunId.current === runId) { setAiConnected(true); setOllamaModel(model); }
+          } catch {
+            if (!text && activeRunId.current === runId) throw new Error("empty stream");
+            if (text) render(text + "\n응답이 끊겼어요. 이어서 질문해 주세요.");
+          } finally {
+            await reader.cancel().catch(() => {});
+          }
+          return { text, source, links: fallback.references, streamed: true };
+        }
         if (res.ok && contentType.includes("application/json")) {
           const data = await res.json();
           if (data && typeof data.text === "string") {
@@ -618,9 +672,12 @@ export default function FundSeaExperience() {
       label,
       historySnapshot,
       updated,
-      nextEvo
+      nextEvo,
+      runId
     );
-    await deliverHumanLikeAssistantTurn(runId, reply);
+    if ("streamed" in reply && reply.streamed) {
+      if (activeRunId.current === runId) setBusy(false);
+    } else await deliverHumanLikeAssistantTurn(runId, reply);
   };
 
   const send = async (value = input) => {
@@ -673,12 +730,15 @@ export default function FundSeaExperience() {
       text,
       historySnapshot,
       updatedAnswers,
-      nextEvo
+      nextEvo,
+      runId
     );
     if (!reply.isGreeting) {
       setDiagnosisStarted(true);
     }
-    await deliverHumanLikeAssistantTurn(runId, reply);
+    if ("streamed" in reply && reply.streamed) {
+      if (activeRunId.current === runId) setBusy(false);
+    } else await deliverHumanLikeAssistantTurn(runId, reply);
   };
 
   const reset = () => {

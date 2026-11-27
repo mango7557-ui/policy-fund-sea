@@ -68,13 +68,9 @@ async function checkOllamaStatus(): Promise<{
     const names: string[] = Array.isArray(data?.models)
       ? data.models.map((m: { name?: string }) => String(m?.name ?? ""))
       : [];
-    const preferred =
-      names.find((n) => n.startsWith("gemma4")) ||
-      names[0] ||
-      OLLAMA_MODEL;
     return {
-      available: names.length > 0,
-      model: preferred,
+      available: names.includes(OLLAMA_MODEL),
+      model: OLLAMA_MODEL,
       models: names,
     };
   } catch {
@@ -171,10 +167,11 @@ async function callOllamaChat(params: {
   systemInstruction: string;
   history: ChatTurn[];
   message: string;
-}): Promise<string | null> {
+  stream?: boolean;
+}): Promise<string | Response | null> {
   const { model, systemInstruction, history, message } = params;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 45000);
+  const timeout = setTimeout(() => controller.abort(), 110000);
 
   try {
     const res = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
@@ -182,10 +179,11 @@ async function callOllamaChat(params: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        stream: false,
+        stream: params.stream === true,
         think: false,
         keep_alive: "30m",
         options: {
+          num_ctx: 4096,
           temperature: 0.55,
           num_predict: 320,
         },
@@ -203,6 +201,7 @@ async function callOllamaChat(params: {
     clearTimeout(timeout);
 
     if (!res.ok) return null;
+    if (params.stream && res.body) return new Response(res.body, { headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store", "X-Accel-Buffering": "no", "X-Chat-Model": model } });
     const data = await res.json();
     const content = String(data?.message?.content ?? "").trim();
     return content || null;
@@ -247,6 +246,7 @@ async function callGeminiChat(params: {
         },
         contents,
         generationConfig: {
+          num_ctx: 4096,
           temperature: 0.55,
           maxOutputTokens: 420,
         },
@@ -340,18 +340,18 @@ export async function POST(req: NextRequest) {
     const upcomingQ = nextQuestion(answers);
     const knownSummary = summarizeKnownFacts(answers);
 
-    const matchedContext = hits
+    const matchedContext = hits.slice(0, 2)
       .map(
         ({ core }) =>
           `- 관련 주제(${core.category}): "${core.question}" / 핵심 포인트: ${core.intent} / 다음에 물어볼 만한 질문: ${core.nextQuestion} / 관련기관: ${core.institutions}`
       )
       .join("\n");
 
-    const ruleSummary = POLICY_REFERENCES.slice(0, 6)
+    const ruleSummary = fallback.references
       .map((r) => `- ${r.institution}(${r.subject}): ${r.criteria}`)
       .join("\n");
 
-    const prefSummary = PREFERENCE_REFERENCES.slice(0, 6)
+    const prefSummary = PREFERENCE_REFERENCES.filter(p => message.includes(p.name)).slice(0, 3)
       .map((p) => `- ${p.name}: ${p.condition} (${p.caution})`)
       .join("\n");
 
@@ -359,7 +359,7 @@ export async function POST(req: NextRequest) {
 
     const systemInstruction = [
       "당신은 정책자금 상담을 돕는 AI 도우미 '정책이'입니다. 첫 문장에서 방금 들은 구체적인 사정이나 걱정을 짧게 받아 주세요. 감정을 단정하지 말고 질문에 답한 뒤 필요한 한 가지만 물어보세요. 실제 사람이나 특정 경력의 전문가라고 주장하지 마세요.",
-      "직전 질문을 기준으로 짧은 답의 뜻을 이해하고, 사용자가 정정한 사실을 우선하세요. 용어를 되묻거나 화제를 바꾸면 지금 요청한 내용을 먼저 답하세요. 공감을 위한 감탄사나 마무리 질문은 반복하지 마세요.",
+      "보통 두세 문장으로 간결하게 답하고 자세한 설명은 요청할 때 제공하세요. 직전 질문을 기준으로 짧은 답의 뜻을 이해하고, 사용자가 정정한 사실을 우선하세요. 용어를 되묻거나 화제를 바꾸면 지금 요청한 내용을 먼저 답하세요. 공감을 위한 감탄사나 마무리 질문은 반복하지 마세요.",
       buildEvolutionPromptContext(evolvedState),
       trainingPrompt(training, message),
       "",
@@ -391,7 +391,9 @@ export async function POST(req: NextRequest) {
           systemInstruction,
           history,
           message,
+          stream: body.stream === true,
         });
+        if (ollamaReply instanceof Response) return ollamaReply;
         if (ollamaReply) {
           const cleanReply = ensureEndsWithFollowUpQuestion(
             cleanHumanSpeech(ollamaReply),
@@ -451,7 +453,9 @@ export async function POST(req: NextRequest) {
           systemInstruction,
           history,
           message,
+          stream: body.stream === true,
         });
+        if (ollamaReply instanceof Response) return ollamaReply;
         if (ollamaReply) {
           const cleanReply = ensureEndsWithFollowUpQuestion(
             cleanHumanSpeech(ollamaReply),
