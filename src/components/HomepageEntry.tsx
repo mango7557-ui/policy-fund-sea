@@ -87,16 +87,15 @@ export function FundingEntry({ onStart, onTopic, busy }: {
       <div className="bf-entry-inner">
         <div className="bf-intro">
           <p className="bf-audience">중소기업 · 소상공인 자금 상담</p>
-          <h1>사업에 필요한 자금,<br /><em>어디서 시작할까요?</em></h1>
+          <h1>사업에 필요한 자금,<br />어디서 시작할까요?</h1>
           <p className="bf-intro-copy">기업 상황과 자금 용도를 들려주세요.<br />검토할 자금 방향과 그 이유, 준비할 자료를 짚어드립니다.</p>
-          <p className="bf-trust">프라임경영기술(주) · 중소벤처기업부 등록 중소기업상담회사 제2022-651호<br />경영지도사 기반 진단 · 협회 전문가 네트워크 · FDSS 분석과 AI 설명</p>
           <div className="bf-intro-actions">
             <button type="button" onClick={onStart}>직접 질문하기 <ArrowRight size={18} aria-hidden="true" /></button>
             <a href="#how">진단 절차 보기 <ArrowDownRight size={16} aria-hidden="true" /></a>
           </div>
         </div>
         <form className="bf-intake" onSubmit={(event) => { event.preventDefault(); if (!busy) onTopic(topics[selected].prompt); }}>
-          <p className="bf-intake-kicker"><span />무료 사전 진단</p>
+          <div className="bf-consultant"><img src="./jeongchaegi.svg" width="44" height="44" alt="" /><div><strong>정책이</strong><small>무료 AI 자금 상담</small></div></div>
           <fieldset>
             <legend>어떤 자금이 필요하세요?</legend>
             <div className="bf-topic-grid">
@@ -116,6 +115,9 @@ export function FundingEntry({ onStart, onTopic, busy }: {
             {busy ? "상담 답변을 작성하고 있어요" : "이 주제로 상담 시작"} <ArrowRight size={18} aria-hidden="true" />
           </button>
         </form>
+      </div>
+      <div className="bf-credentials">
+        <p><strong>프라임경영기술(주)</strong><span>중소벤처기업부 등록 중소기업상담회사 제2022-651호</span></p>
       </div>
     </div>
   );

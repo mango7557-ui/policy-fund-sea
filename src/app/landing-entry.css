@@ -92,14 +92,17 @@ html[data-theme] .bf-header-actions .theme-toggle, .bf-menu-toggle {
 
 html[data-theme] .sea-hero#diagnosis { padding-top: 0 !important; }
 .bf-entry {
-  --entry-night: #112e4b;
+  --entry-ink: #103657;
+  --entry-surface: #f4f8f7;
+  --entry-wave: #dcebe7;
+  --entry-muted: #395967;
   --entry-foam: #b6eea6;
   position: relative;
   isolation: isolate;
   overflow: hidden;
   margin-inline: calc(50% - 50vw);
   color: #fff;
-  background: var(--entry-night);
+  background: var(--entry-surface);
 }
 .bf-tide {
   position: absolute;
@@ -108,29 +111,18 @@ html[data-theme] .sea-hero#diagnosis { padding-top: 0 !important; }
   overflow: hidden;
   pointer-events: none;
 }
-/* Engraved curves echo the waves in the official brand mark. */
-.bf-tide::before, .bf-tide::after {
+/* A broad wave anchors the consultation desk to the brand mark. */
+.bf-tide::before {
   content: "";
   position: absolute;
   width: 120%;
-  height: 125%;
-  left: 20%;
-  top: 55%;
+  height: 95%;
+  left: -24%;
+  bottom: -82%;
   border-radius: 50%;
-  border: 1px solid #72c9bb30;
-  box-shadow: 0 0 0 13px var(--entry-night), 0 0 0 14px #72c9bb30,
-              0 0 0 27px var(--entry-night), 0 0 0 28px #72c9bb30,
-              0 0 0 41px var(--entry-night), 0 0 0 42px #72c9bb30,
-              0 0 0 55px var(--entry-night), 0 0 0 56px #72c9bb30,
-              0 0 0 69px var(--entry-night), 0 0 0 70px #72c9bb30;
-  transform: rotate(-14deg);
-}
-.bf-tide::after {
-  inset: auto auto -120% -31%;
-  width: 105%;
-  height: 130%;
-  transform: rotate(13deg);
-  opacity: .64;
+  border: 18px solid var(--entry-wave);
+  box-shadow: 0 0 0 12px var(--entry-surface), 0 0 0 22px var(--entry-wave);
+  transform: rotate(-7deg);
 }
 .bf-entry-inner {
   display: grid;
@@ -148,23 +140,23 @@ html[data-theme] .sea-hero#diagnosis { padding-top: 0 !important; }
   line-height: 1.5;
   font-weight: 650;
 }
-.bf-audience { color: #d0e5e4; }
+.bf-audience { color: var(--entry-muted); }
 .bf-audience::before { content: ""; width: 27px; height: 2px; background: var(--entry-foam); }
 .sea-hero .bf-intro h1 {
   margin: 23px 0 18px;
-  color: #fff;
+  color: var(--entry-ink);
   font-size: clamp(46px, 4.35vw, 65px);
   line-height: 1.23;
   letter-spacing: -.065em;
   font-weight: 740;
 }
-.bf-intro h1 em { font-style: normal; color: var(--entry-foam); }
-.bf-intro-copy { margin: 0; color: #dce8ed; font-size: clamp(15px, 1.24vw, 18px); line-height: 1.83; word-break: keep-all; }
+
+.bf-intro-copy { margin: 0; color: var(--entry-muted); font-size: clamp(15px, 1.24vw, 18px); line-height: 1.83; word-break: keep-all; }
 .bf-intro-actions { margin-top: 30px; display: flex; flex-wrap: wrap; align-items: center; gap: 24px; }
 .bf-intro-actions button, .bf-intro-actions a { gap: 12px; min-height: 46px; font-size: 14px; font-weight: 700; }
-.bf-intro-actions button { background: var(--entry-foam); color: #103128; padding: 0 20px; border: 0; border-radius: 7px; }
-.bf-intro-actions button:hover { background: #d3f8c8; }
-.bf-intro-actions a { color: #fff; }
+.bf-intro-actions button { background: #104d3b; color: white; padding: 0 20px; border: 0; border-radius: 7px; }
+.bf-intro-actions button:hover { background: #073b2b; }
+.bf-intro-actions a { color: var(--entry-ink); }
 .bf-intro-actions a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .bf-entry :where(a,button):focus-visible { outline-color: #ffda78; }
 
@@ -172,8 +164,8 @@ html[data-theme] .sea-hero#diagnosis { padding-top: 0 !important; }
   position: relative;
   margin: 0;
   padding: clamp(23px, 2.36vw, 33px);
-  color: #152f40;
-  background: #fbfcf9;
+  color: #fff;
+  background: #103657;
   border: 1px solid #dce7e6;
   border-radius: 17px;
   box-shadow: 0 18px 35px #061d332e;
@@ -267,7 +259,7 @@ html[data-theme] .sea-hero#diagnosis { padding-top: 0 !important; }
   .bf-topic-grid { margin-top: 14px; }
   .bf-topic-face { padding: 10px 11px; gap: 5px; }
   .bf-topic-text small { font-size: 11px; }
-  .bf-tide::before { width: 230%; top: 49%; left: -65%; }
+  .bf-tide::before { width: 220%; left: -85%; }
   .bf-tide::after { display: none; }
 }
 @media (max-width: 480px) {
@@ -283,7 +275,21 @@ html[data-theme] .sea-hero#diagnosis { padding-top: 0 !important; }
   .bf-topic input:checked + .bf-topic-face .bf-topic-check { color: Highlight; }
 }
 
-.bf-trust {margin:18px 0 0;color:#d0e5e4;font-size:13px;line-height:1.75;word-break:keep-all;}
+html[data-theme="dark"] .bf-entry {
+  --entry-ink: #f0f7fa;
+  --entry-muted: #c4d6dc;
+  --entry-surface: #102838;
+  --entry-wave: #183b48;
+}
+.bf-consultant { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; }
+.bf-consultant img { background: white; border-radius: 50%; object-fit: contain; padding: 4px; }
+.bf-consultant strong, .bf-consultant small { display: block; }
+.bf-consultant small { color: #c5dadd; font-size: 12px; }
+.bf-entry .bf-topic-submit { background: #b6eea6; color: #103128; }
+.bf-entry .bf-topic-submit:hover { background: #cef7c0; }
+.bf-credentials { position: relative; padding: 14px 0; background: var(--entry-surface); border-top: 1px solid var(--entry-wave); }
+.bf-credentials p { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 14px; width: min(1180px, calc(100% - 72px)); margin: auto; color: var(--entry-muted); font-size: 12px; line-height: 1.6; }
+@media (max-width: 730px) { .bf-credentials p { width: calc(100% - 40px); } }
 
 .reply-typing::after { content: ""; display: inline-block; height: 1em; margin-left: .14em; border-right: 2px solid currentColor; vertical-align: -.12em; }
 @media (prefers-reduced-motion: reduce) { .reply-typing::after { display: none; } }
