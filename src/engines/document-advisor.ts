@@ -11,17 +11,17 @@ export type Answers = Partial<Record<AnswerKey, string>> & { branch?: BranchAnsw
 export type Question = { key: AnswerKey; text: string; choices: { value: string; label: string }[] };
 const q = (key: AnswerKey, text: string, options: [string, string][]): Question => ({ key, text, choices: options.map(([value, label]) => ({ value, label })) });
 export const DIAGNOSIS_QUESTIONS: Question[] = [
-  q("purpose", "요즘 어떤 자금이 가장 절실하신가요?", [["working", "운영비나 인건비가 좀 필요해요"], ["facility", "기계나 매장을 늘려보려고요"], ["refinance", "이자 높은 대출을 갈아타고 싶어요"], ["unknown", "아직 뭐부터 할지 고민 중이에요"]]),
-  q("entity", "지금 사업자는 어떻게 내고 운영 중이세요?", [["sole", "개인사업자로 하고 있어요"], ["corporation", "법인사업자예요"], ["prestartup", "아직 창업 준비 중이에요"]]),
-  q("operation", "요즘 가게나 사업장은 계속 운영 중이신가요?", [["active", "네, 정상 영업 중이에요"], ["dormant", "잠깐 쉬고(휴업) 있어요"], ["closed", "폐업하고 다시 준비 중이에요"]]),
-  q("tax", "혹시 국세나 지방세 중에 밀린 세금이 있으실까요?", [["none", "네, 세금 밀린 건 없어요"], ["exception", "조금 있는데 분납 중이거나 곧 낼 예정이에요"], ["active", "체납이 좀 있어서 걱정이에요"], ["unknown", "한번 확인해 봐야 해요"]]),
-  q("overdue", "은행이나 카드, 보증기관 쪽 연체는 괜찮으신가요?", [["none", "네, 연체는 전혀 없어요"], ["cleared", "잠깐 있었는데 지금은 다 갚았어요"], ["active", "현재 연체 중인 게 있어요"], ["unknown", "잘 모르겠어요"]]),
-  q("credit", "대표님 개인 신용이나 회생·신용회복 관련해 걸리는 부분이 있으세요?", [["none", "아니요, 특별한 문제 없어요"], ["review", "신용회복이나 회생 이력이 좀 있어요"], ["unknown", "한번 봐야 할 것 같아요"]]),
-  q("industry", "지금 하시는 일이 주로 어떤 업종이신가요?", [["eligible", "제조·음식점·도소매·IT·일반 서비스예요"], ["excluded", "부동산 임대나 유흥 쪽이에요"], ["unknown", "지원 대상 업종인지 잘 모르겠어요"]]),
-  q("ceo", "사업자등록증에 있는 대표님 본인이 직접 운영하시는 거 맞으시죠?", [["yes", "네, 제가 직접 다 챙기고 있어요"], ["review", "가족이나 동업자랑 같이 봐서 설명이 좀 필요해요"], ["unknown", "확인이 필요해요"]]),
-  q("related", "혹시 대표님 명의로 된 다른 사업자나 법인이 하나 더 있으신가요?", [["none", "아니요, 이 사업장 하나뿐이에요"], ["yes", "네, 다른 사업자도 하나 더 있어요"], ["unknown", "확인이 필요해요"]]),
-  q("finance", "요즘 매출이나 장사 흐름은 좀 어떠신 편이에요?", [["normal", "꾸준히 돌아가는 편이에요"], ["weak", "적자나 부채 때문에 마음이 좀 무거워요"], ["unknown", "장부를 한번 봐야 해요"]]),
-  q("documents", "나중에 대출 잔액이나 매출 서류 같은 건 떼어보실 수 있으시죠?", [["ready", "네, 서류는 준비할 수 있어요"], ["missing", "어떻게 떼는지 잘 몰라서 도움이 필요해요"], ["unknown", "아직 확인 전이에요"]]),
+  q("purpose", "돈을 어디에 쓰실 예정이에요?", [["working", "운영비"], ["facility", "기계·시설 구입"], ["refinance", "대출 갈아타기"], ["unknown", "잘 모르겠어요"]]),
+  q("entity", "개인사업자세요, 법인사업자세요?", [["sole", "개인"], ["corporation", "법인"], ["prestartup", "창업 준비 중"]]),
+  q("operation", "지금도 사업장을 운영하고 계세요?", [["active", "영업 중이에요"], ["dormant", "잠시 쉬고 있어요"], ["closed", "폐업했어요"]]),
+  q("tax", "아직 못 낸 세금이 있나요?", [["none", "없어요"], ["exception", "나눠 내는 중이에요"], ["active", "있어요"], ["unknown", "잘 모르겠어요"]]),
+  q("overdue", "지금 밀린 대출금이나 카드값이 있나요?", [["none", "없어요"], ["cleared", "지금은 다 갚았어요"], ["active", "있어요"], ["unknown", "잘 모르겠어요"]]),
+  q("credit", "신용회복이나 개인회생을 신청한 적이 있나요?", [["none", "없어요"], ["review", "있어요"], ["unknown", "잘 모르겠어요"]]),
+  q("industry", "어떤 일을 하세요?", [["eligible", "제조·음식점·판매 등"], ["excluded", "부동산 임대·유흥 등"], ["unknown", "잘 모르겠어요"]]),
+  q("ceo", "사업을 직접 운영하세요?", [["yes", "직접 운영해요"], ["review", "따로 설명할게요"], ["unknown", "잘 모르겠어요"]]),
+  q("related", "대표님 이름으로 된 다른 사업장도 있나요?", [["none", "없어요"], ["yes", "있어요"], ["unknown", "잘 모르겠어요"]]),
+  q("finance", "요즘 사업 형편은 어떤가요?", [["normal", "꾸준한 편이에요"], ["weak", "적자나 빚이 부담돼요"], ["unknown", "잘 모르겠어요"]]),
+  q("documents", "매출을 확인할 서류를 준비할 수 있나요?", [["ready", "준비할 수 있어요"], ["missing", "도움이 필요해요"], ["unknown", "잘 모르겠어요"]]),
 ];
 export function nextQuestion(answers: Answers) {
   return DIAGNOSIS_QUESTIONS.find(item => answers[item.key] === undefined) ?? null;
@@ -47,6 +47,20 @@ export function extractAnswersFromText(current: Answers, rawText: string, previo
     return current;
   }
   const next: Answers = { ...current };
+
+  const pending = nextQuestion(current);
+  const prompted = pending && previousReply.endsWith(pending.text);
+  if (pending?.key === "purpose" && /^(운영|운영비|운영자금)(이요|이야|요)?[.!~ ]*$/.test(t)) return { ...current, purpose: "working" };
+  if (prompted) {
+    const short = t.replace(/[.!~\s]/g, "");
+    const choice = pending.choices.find(c => c.label.replace(/\s/g, "") === short);
+    if (choice) return { ...current, [pending.key]: choice.value };
+
+    if (["tax", "overdue", "credit", "related"].includes(pending.key)) {
+      if (/^(없어|없음|아니|아니요|아뇨)$/.test(short)) return { ...current, [pending.key]: "none" };
+      if (/^(네|예|응|있어|있음)$/.test(short)) return { ...current, [pending.key]: {tax:"active",overdue:"active",credit:"review",related:"yes"}[pending.key as "tax" | "overdue" | "credit" | "related"] };
+    }
+  }
 
   // 1. 자금 용도 (purpose)
   if (/시설|설비|기계|공장|확장|리뉴얼|인테리어|매입|신축/.test(t)) {
@@ -201,34 +215,7 @@ export function searchQuestions(query: string) {
 }
 export function formatHumanFollowUpQuestion(currentAnswers: Answers = {}): string {
   const upcoming = nextQuestion(currentAnswers);
-  const diag = freeDiagnosis(currentAnswers);
-  if (!upcoming) {
-    return `지금까지 들려주신 이야기만 봐도 '${diag.status}' 상태로 ${diag.direction} 쪽 길을 먼저 열어보시면 참 좋을 것 같아요. 혹시 마음속에 두고 계신 희망 금액이나 더 걸리는 부분이 있으세요?`;
-  }
-  switch (upcoming.key) {
-    case "purpose":
-      return "요즘 어떤 자금이 제일 절실하세요? 당장 돌아가는 운영비·인건비 때문이신지, 아니면 기계나 매장을 늘리시려는 건지 편하게 들려주세요.";
-    case "entity":
-      return "혹시 지금 사업자는 개인사업자로 내고 계세요, 아니면 법인으로 운영 중이세요?";
-    case "operation":
-      return "지금도 사업장을 운영하고 계세요?";
-    case "tax":
-      return "혹시 국세나 지방세 중에 잠깐 밀려 있는 게 있으실까요? 분납 중이셔도 방법이 있으니 편하게 말씀해 주셔도 돼요.";
-    case "overdue":
-      return "현재 납부가 늦어진 대출금이나 카드 대금이 있을까요?";
-    case "credit":
-      return "혹시 대표님 개인 신용점수나 예전 회생·신용회복 이력 때문에 마음 쓰이시는 부분은 없으세요?";
-    case "industry":
-      return "지금 하고 계신 일이 구체적으로 어떤 업종이세요? 예를 들면 식당이나 제조업, 도소매, IT 같은 거요!";
-    case "ceo":
-      return "사업자등록증에 올라가 있는 대표님 본인이 직접 현장에서 다 운영하고 계신 거 맞으시죠?";
-    case "related":
-      return "혹시 대표님 성함으로 하나 더 내신 개인사업자나 관계법인이 따로 있으실까요?";
-    case "finance":
-      return "요즘 매출이나 장사 흐름은 좀 어떠세요? 버틸 만하신지, 아니면 적자나 기존 대출 때문에 숨통이 좀 막히시는 편인지 궁금해요.";
-    default:
-      return "나중에 심사 들어가면 부가세 증명원이나 금융거래확인서 같은 서류가 필요한데, 그런 건 세무사님이나 홈택스에서 떼어보실 수 있으시죠?";
-  }
+  return upcoming?.text || "지금까지 말씀해 주신 내용으로 정리해 볼게요.";
 }
 
 export function interviewReply(answers: Answers, previous?: Answers) {
@@ -247,7 +234,7 @@ export function interviewReply(answers: Answers, previous?: Answers) {
     const value = answers[changed.key];
     if (value === "unknown") lead = "그 부분은 나중에 확인할 내용으로 남겨둘게요.";
     else if (changed.key === "entity") lead = value === "sole" ? "개인사업자로 운영하고 계시군요." : value === "corporation" ? "법인으로 운영하고 계시군요." : "창업을 준비하고 계시는군요.";
-    else if (changed.key === "purpose") lead = ({ working: "사업 운영에 쓸 돈이 필요하시군요.", facility: "시설 투자를 준비하고 계시는군요.", refinance: "기존 대출의 이자 부담을 줄이고 싶으시군요." })[value as "working" | "facility" | "refinance"] || "";
+    else if (changed.key === "purpose") lead = ({ working: "운영비가 필요하시군요.", facility: "시설 투자를 준비하고 계시는군요.", refinance: "기존 대출의 이자 부담을 줄이고 싶으시군요." })[value as "working" | "facility" | "refinance"] || "";
     else if (value === "active" && ["tax", "overdue"].includes(changed.key)) lead = "말씀해 주셔서 고맙습니다. 이 부분은 신청 전에 별도로 확인하도록 표시할게요.";
   }
   return [lead, formatHumanFollowUpQuestion(answers)].filter(Boolean).join(" ");
@@ -291,7 +278,7 @@ export function conversationReply(query: string, answers: Answers, history: Conv
   if (/(요약|정리해|정리해줘|뭐라고 했|어디까지)/.test(words) && !/서류|공고|절차|상품|준비물/.test(words)) {
     const facts = DIAGNOSIS_QUESTIONS.flatMap(q => {
       const value = q.choices.find(c => c.value === answers[q.key]);
-      return value ? [value.label] : [];
+      return value ? [q.text + " → " + value.label] : [];
     });
     return facts.length ? "지금까지 알려주신 내용을 모으면 이래요.\n" + facts.map(f => "· " + f).join("\n") : "아직 구체적으로 알려주신 사업 상황은 없어요. 궁금하신 것부터 이야기해 주세요.";
   }
@@ -344,7 +331,7 @@ export function referenceReply(query: string, currentAnswers: Answers = {}, hist
 
   const extraDetail = /금리|한도|서류|조건|자격|공고|어디|대상|얼마|체납|연체|거절|폐업|신청|보증/.test(query);
   if (!extraDetail && /개인\s*사업자|자영업/.test(query) && /자금|돈|대출/.test(query) && !updatedAnswers.purpose) {
-    return { text: "개인사업을 하시면서 자금이 필요해지셨군요. 어디서부터 알아볼지 같이 정리해 봐요. 지금 가장 먼저 쓰실 곳이 월세나 인건비 같은 운영비인가요, 아니면 기계나 시설을 마련하는 비용인가요?", coreId: null, references: [] };
+    return { text: "개인사업을 하고 계시는군요. " + DIAGNOSIS_QUESTIONS[0].text + "", coreId: null, references: [] };
   }
   if (!extraDetail && /월세|임대료|인건비|급여|재료비/.test(query)) {
     const expense = query.match(/월세|임대료|인건비|급여|재료비/)![0];

@@ -84,7 +84,7 @@ describe("문서 기반 UAT 회귀검증", () => {
 
 it("acknowledges the sole proprietor and follows the stated expense on the next turn", () => {
   const first = "개인 사업자인데 자금이 필요해?";
-  expect(referenceReply(first).text).toMatch(/^개인사업.*운영비/);
+  expect(referenceReply(first).text).toMatch(/^개인사업.*돈을 어디에/);
   const next = referenceReply("월세가 급해요", extractAnswersFromText({}, first));
   expect(next.text).toMatch(/^월세.*사업장을 운영/);
 });
@@ -128,4 +128,14 @@ it("understands a short business-form reply and advances without inferring an en
     expect(interviewReply(updated, previous)).not.toContain("아니면 법인");
   }
   expect(extractAnswersFromText(previous, "개인 대출", prompt).entity).toBeUndefined();
+});
+
+it("handles the one-word operating expense reply and asks one matching question per turn", () => {
+  const first = interviewReply({});
+  const working = extractAnswersFromText({}, "운영", "안녕하세요! " + first);
+  expect(working).toEqual({purpose:"working"});
+  const second = interviewReply(working, {});
+  expect(second).toBe("운영비가 필요하시군요. 개인사업자세요, 법인사업자세요?");
+  expect(extractAnswersFromText(working, "개인", second).entity).toBe("sole");
+  for (const q of DIAGNOSIS_QUESTIONS) expect(q.text.match(/\?/g)).toHaveLength(1);
 });

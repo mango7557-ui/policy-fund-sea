@@ -381,7 +381,7 @@ export default function FundSeaExperience() {
       )
     ) {
       return {
-        text: "안녕하세요. " + interviewReply(currentAnswers),
+        text: "안녕하세요! " + interviewReply(currentAnswers),
         source: "정책이 상담 가이드",
         links: [],
         isGreeting: true,
@@ -1019,9 +1019,8 @@ export default function FundSeaExperience() {
                   </div>
                 )}
               </div>
-              {messages.length > 0 && question && !busy && !/잠시 멈출게요|이어서 이야기해요/.test(messages.at(-1)?.text || "") && (
+              {question && !busy && messages.at(-1)?.role === "assistant" && messages.at(-1)?.text.endsWith(question.text) && (
                 <div className="nbq-panel">
-                  {!messages.at(-1)?.text.endsWith(formatHumanFollowUpQuestion(answers)) && <p>{formatHumanFollowUpQuestion(answers)}</p>}
                   <div>
                     {question.choices.map((choice) => (
                       <button
@@ -1030,7 +1029,7 @@ export default function FundSeaExperience() {
                           chooseAnswer(question.key, choice.value, choice.label)
                         }
                       >
-                        💬 {choice.label}
+                        {choice.label}
                       </button>
                     ))}
                   </div>
@@ -1069,7 +1068,7 @@ export default function FundSeaExperience() {
                     }}
                     rows={1}
                     aria-label="정책이에게 질문하기"
-                    placeholder="정책이에게 편하게 말씀해 주세요 (예: 설비 늘리려는데 자금이 필요해요)"
+                    placeholder="짧게 답해도 괜찮아요"
                   />
                   <button
                     className="send-button"
