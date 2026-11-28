@@ -1,4 +1,5 @@
 import { CompanyProfile, profileAssessment } from "./company-profile";
+import type { FundingPlan } from "./funding-needs";
 import { diagnoseBranch, BranchAnswers } from "./business-branches";
 import bank from "../data/master/question-bank.json";
 import rules from "../data/master/rules.json";
@@ -8,7 +9,7 @@ export const QUESTION_BANK = bank;
 export const POLICY_REFERENCES = rules.Institution_Rule_Index.slice(1).map(({ cells, row }) => ({ id: cells[0], institution: cells[1], subject: cells[2], criteria: cells[5], status: cells[6], date: cells[8], url: cells[9], note: cells[10], row }));
 export const PREFERENCE_REFERENCES = rules.Preferential_Factors.slice(1).map(({ cells }) => ({ id: cells[0], name: cells[2], evidence: cells[3], condition: cells[5], caution: cells[9] }));
 export type AnswerKey = "purpose" | "entity" | "operation" | "tax" | "overdue" | "credit" | "industry" | "ceo" | "related" | "finance" | "documents";
-export type Answers = Partial<Record<AnswerKey, string>> & { profile?: CompanyProfile; branch?: BranchAnswers };
+export type Answers = Partial<Record<AnswerKey, string>> & { profile?: CompanyProfile; branch?: BranchAnswers; fundingPlan?: FundingPlan };
 export type Question = { key: AnswerKey; text: string; choices: { value: string; label: string }[] };
 const q = (key: AnswerKey, text: string, options: [string, string][]): Question => ({ key, text, choices: options.map(([value, label]) => ({ value, label })) });
 export const DIAGNOSIS_QUESTIONS: Question[] = [

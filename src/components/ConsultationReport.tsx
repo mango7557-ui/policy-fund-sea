@@ -38,9 +38,11 @@ export function ConsultationReport({ answers, messages, busy, onRecheck }: { ans
           {Object.keys(report.branchInputs).length > 0 && <dl>{fieldsFor(report.branchInputs).filter(f => report.branchInputs[f.key]).map(f => <div key={f.key}><dt>{f.label}</dt><dd>{report.branchInputs[f.key]}</dd></div>)}</dl>}
           <h3>추가로 확인할 사항</h3><ul>{[...report.diagnosis.missing, ...(report.diagnosis.branch?.missing || [])].map((r, i) => <li key={i}>{r}</li>)}</ul>
           <h3>다음 행동</h3><p>{report.diagnosis.action}</p>
+          {report.fundingPlan&&<section><h3>3년 자금수요 계획</h3><p>총 수요 {report.fundingPlan.result.total.toLocaleString("ko-KR")}만원 · 내부·확정 자금 {report.fundingPlan.result.available.toLocaleString("ko-KR")}만원 · 외부조달 필요액 {report.fundingPlan.result.external.toLocaleString("ko-KR")}만원</p><p>고객의 계획값으로 계산한 수요이며 실제 승인 한도가 아닙니다. 계산일 {report.fundingPlan.calculatedAt.slice(0,10)}</p><p>사업화 단계 · {report.fundingPlan.stage||"미입력"} / 증빙 · {report.fundingPlan.evidence==="available"?"보유한다고 입력함 · 검증 필요":"자료 확인 필요"}</p></section>}
           {report.diagnosis.branch && <><ul>{report.diagnosis.branch.routes.map(r => <li key={r}>{r}</li>)}</ul><p>{report.diagnosis.branch.notice}</p></>}
           <h3>상담 기록</h3>{report.messages.map((m,i) => <section key={i}><strong>{m.role === "user" ? "대표님" : "정책이"} · {m.time}</strong><p>{m.text}</p>{m.source && <small>출처 · {m.source}</small>}</section>)}
           <p>자료 기준 · {report.diagnosis.referenceDate} / {report.diagnosis.source}</p>
+          {report.trace&&<p>진단 규칙 · {report.trace.rulesVersion} / {report.trace.evidenceStatus} / 생성 당시 검토 · {report.trace.expertStatus}. 이후 검토 결과는 회원 보관함에서 별도로 확인합니다.</p>}
         </article>
       </>}
     </dialog>

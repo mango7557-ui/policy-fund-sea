@@ -13,14 +13,17 @@ export function PartnerConsultations({user, report}: {user:string; report:Consul
   const [message,setMessage] = useState("");
   const [busy,setBusy] = useState(false);
   const [revision,setRevision] = useState(0);
+  const [operator,setOperator] = useState(false);
   const partner = partners.find(p => p.user_id === selected && p.verified);
   useEffect(() => {
     let active = true;
     void Promise.all([db.from("bareunfund_partners").select("user_id,name,specialty,region,fee,verified"),
-      db.from("bareunfund_partner_cases").select("id,partner,customer,diagnosis_status,state,reason").order("consented_at",{ascending:false})]).then(([p,c]) => {
+      db.from("bareunfund_partner_cases").select("id,partner,customer,diagnosis_status,state,reason").order("consented_at",{ascending:false}),
+      db.from("bareunfund_operators").select("user_id").eq("user_id",user).maybeSingle()]).then(([p,c,o]) => {
       if (!active) return;
       if (p.error || c.error) {setMessage("파트너 정보를 불러오지 못했습니다."); return;}
       setPartners(p.data || []); setCases(c.data || []);
+      setOperator(!!o.data&&!o.error);
     });
     return () => {active=false;};
   },[user,revision]);
@@ -34,6 +37,7 @@ export function PartnerConsultations({user, report}: {user:string; report:Consul
   const verified = partners.filter(p => p.verified && p.user_id !== user);
   return <details className="document-tools"><summary>전문가 상담 · 실행 파트너</summary><div className="document-tool-body">
     <p>진단을 마친 보고서를 보관한 뒤, 필요할 때 전문가를 선택해 주세요.</p>
+    {operator&&<details><summary>운영자 · 파트너 검증과 배정 중지</summary><p>경력·자격·준법서약·개인정보 취급·비용 고지를 실제로 확인한 경우에만 승인하세요. 승인된 파트너만 고객의 선택 목록에 나타납니다.</p>{partners.map(p=><form key={p.user_id} onSubmit={e=>{e.preventDefault();void perform(()=>db.from("bareunfund_partners").update({verified:!p.verified}).eq("user_id",p.user_id),p.verified?"새 배정을 중지했습니다.":"검증 완료로 기록했습니다.");}}><h4>{p.name} · {p.verified?"검증 완료":"검증 대기"}</h4><p>{p.specialty} · {p.region} · {p.fee}</p><label><input type="checkbox" required/>검증 근거와 조치 대상을 확인했습니다.</label><button disabled={busy}>{p.verified?"배정 중지":"검증 승인"}</button></form>)}</details>}
     {report?.diagnosis.complete && verified.length > 0 && <><label>상담 파트너<select value={selected} onChange={e=>{setSelected(e.target.value);setConsent(false);}}>
       <option value="">선택해 주세요</option>{verified.map(p=><option key={p.user_id} value={p.user_id}>{p.name} · {p.region} · {p.specialty}</option>)}</select></label>
       {partner && <><p>상담 범위·비용 · {partner.fee}</p><p>공유할 진단 상태 · {report.diagnosis.status}</p>

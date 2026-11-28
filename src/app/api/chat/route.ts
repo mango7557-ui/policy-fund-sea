@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { guidedReply } from "../../../engines/guided-conversation";
 import { matchTraining, parseTrainingStore, trainingPrompt, TrainingEntry } from "../../../engines/training";
 import { readTraining } from "../../../server/training-store";
 import {
@@ -41,7 +42,7 @@ const CORS_HEADERS: Record<string, string> = {
 
 const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "gemma4:latest";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:7b";
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: process.env.NODE_ENV === "development" ? CORS_HEADERS : {} });
@@ -302,9 +303,8 @@ export async function POST(req: NextRequest) {
         model: OLLAMA_MODEL, history: history.slice(-3), message,
         systemInstruction: "한국어 자금 상담 중입니다. 금전을 가리킬 때는 자금이라고 표현하세요. 사용자가 방금 말한 상황에 맞춰 짧고 다정한 존댓말 한 문장으로 답하세요. 상투적인 감사 인사나 직전에 쓴 표현은 생략하세요. 질문이나 추천은 쓰지 마세요. 직전 질문을 다시 묻지 마세요. 확인된 상황: " + summarizeKnownFacts(rawAnswers),
       });
-      const acknowledgement = typeof lead === "string" ? lead.trim().split(/[?？]/)[0].match(/^[^.!?？\n]+[.!](?:\s|$)/)?.[0].trim() : "";
-      if (acknowledgement && acknowledgement.length <= 55) return jsonWithCors({ mode: "interview", provider: "ollama", model: OLLAMA_MODEL,
-        source: "Ollama (" + OLLAMA_MODEL + ")", text: acknowledgement + " " + question });
+      if (typeof lead === "string" && lead.trim()) return jsonWithCors({ mode: "interview", provider: "ollama", model: OLLAMA_MODEL,
+        source: "Ollama (" + OLLAMA_MODEL + ")", text: guidedReply(lead,rawAnswers,history.filter(t=>t.role==="assistant").map(t=>t.text)) });
       return jsonWithCors({ mode: "interview", provider: "rule-fallback" });
     }
 

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { calculateFundingNeeds, FundingNeeds as Values } from "../engines/funding-needs";
+import { calculateFundingNeeds, FundingNeeds as Values, FundingPlan } from "../engines/funding-needs";
 
 const fields: { key: keyof Values; label: string }[] = [
   { key: "facility", label: "시설·설비 투자" }, { key: "working", label: "추가 운전자본" },
@@ -10,7 +10,7 @@ const fields: { key: keyof Values; label: string }[] = [
   { key: "own", label: "사용 가능한 자체자금" },
 ];
 
-export function FundingNeeds() {
+export function FundingNeeds({onChange}:{onChange?:(plan:FundingPlan|null)=>void}) {
   const [values, setValues] = useState<Partial<Record<keyof Values, string>>>({});
   const [result, setResult] = useState<ReturnType<typeof calculateFundingNeeds> | null>(null);
   const [error, setError] = useState("");
@@ -25,12 +25,13 @@ export function FundingNeeds() {
     try {
       const input = Object.fromEntries(fields.map(({ key }) => [key, Number(values[key])])) as Values;
       setResult(calculateFundingNeeds(input)); setError("");
+      onChange?.({values:input,business,stage,evidence,risk,calculatedAt:new Date().toISOString()});
     } catch (e) { setResult(null); setError(e instanceof Error ? e.message : "입력값을 확인해 주세요."); }
   }
-  return <details className="document-tools funding-needs">
+  return <details className="document-tools funding-needs" onChange={()=>{setResult(null);onChange?.(null);}}>
     <summary>선택 진단 · 앞으로 3년의 자금수요 살펴보기</summary>
     <div className="document-tool-body">
-      <p>향후 3년 전체 계획을 만원 단위로 입력해 주세요. 같은 비용이 두 항목에 들어갔다면 중복 금액을 빼고 계산합니다. 입력값은 현재 화면에서만 사용됩니다.</p>
+      <p>향후 3년 전체 계획을 만원 단위로 입력해 주세요. 같은 비용이 두 항목에 들어갔다면 중복 금액을 빼고 계산합니다. 계산을 마치면 상담 보고서에 포함되며, 회원 보관함에 보고서를 저장할 수 있어요.</p>
       <div className="funding-needs-grid"><label>기업 또는 자금 계획<select value={business} onChange={e => { setBusiness(e.target.value); setStage(""); setEvidence(""); }}><option value="">선택해 주세요</option><option value="general">일반 기업·소상공인</option><option value="technology">기술·제조·벤처·R&amp;D</option><option value="facility">대규모 시설투자·투자유치</option></select></label>
       {advanced && <><label>사업화 단계<select value={stage} onChange={e => setStage(e.target.value)}><option value="">선택해 주세요</option><option>아이디어·개발</option><option>시제품</option><option>제품화·양산 준비</option><option>매출 발생</option></select></label><label>계획을 확인할 근거<select value={evidence} onChange={e => setEvidence(e.target.value)}><option value="">선택해 주세요</option><option value="available">견적·계약 등 확인할 자료가 있음</option><option value="missing">자료 준비 또는 확인이 필요함</option></select></label></>}
       <label>전문가 검토가 필요한 상황<select value={risk} onChange={e => setRisk(e.target.value)}><option value="">선택해 주세요</option><option value="yes">거절 이력·체납·재무 어려움·복합 조달이 있음</option><option value="unknown">확인이 필요함</option><option value="no">현재 해당 사항 없음</option></select></label></div>

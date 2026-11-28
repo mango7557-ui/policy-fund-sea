@@ -52,6 +52,8 @@ import { ConsultationReport } from "./ConsultationReport";
 import guide from "../data/management-guide.json";
 import { FundingNeeds } from "./FundingNeeds";
 import { ConsultationCases } from "./ConsultationCases";
+import { NoticeBoard } from "./NoticeBoard";
+import { guidedReply } from "../engines/guided-conversation";
 import { matchTraining, parseTrainingStore, readLocalTraining, trainingPrompt, TrainingEntry, TRAINING_EVENT } from "../engines/training";
 
 type Message = {
@@ -679,10 +681,7 @@ export default function FundSeaExperience() {
           if (!res.ok) continue;
           const data = await res.json();
           if (data.provider === "ollama" && typeof data.text === "string" && data.text.trim()) {
-            const lead = String(data.text).split(/[.!?？]/, 1)[0].trim();
-            const repeated = lead && messages.slice(-6).some(turn => turn.role === "assistant" && turn.text.includes(lead));
-            if (repeated || /^(말씀해 주셔서|알려주셔서|감사합니다|고맙습니다)/.test(lead)) break;
-            text = data.text;
+            text = guidedReply(data.text, updated, messages.filter(m=>m.role==="assistant").map(m=>m.text));
             source = data.source;
             break;
           }
@@ -1217,7 +1216,7 @@ export default function FundSeaExperience() {
             </aside>
           </div>
           <QuestionLibrary onAsk={send} />
-          <FundingNeeds />
+          <FundingNeeds onChange={plan=>setAnswers(previous=>({...previous,fundingPlan:plan||undefined}))} />
           <details className="document-tools"><summary>경영지원 가이드 · 분야별로 질문하기</summary>
             <div className="document-tool-body"><p>프라임경영기술의 2027년 경영지원서비스 브로셔와 가이드북에서 상담 주제를 골랐습니다. 질문을 선택하면 정책이 상담과 보고서에 답변이 이어집니다.</p>
             <div className="question-results">{guide.map(item => <button type="button" key={item.topic} disabled={busy} onClick={() => { openConsultation(false); void send(item.question); }}><span>{item.topic} · 가이드북 {item.pages}쪽</span>{item.question}</button>)}</div></div>
@@ -1412,6 +1411,7 @@ export default function FundSeaExperience() {
             </div>
           </section>
         </div>
+        <div id="notices" className="section-shell"><NoticeBoard /></div>
         <section className="faq-section section-shell" id="faq">
           <div className="section-heading">
             <span className="mini-label">자주 묻는 질문</span>

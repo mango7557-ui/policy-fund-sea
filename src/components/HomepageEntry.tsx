@@ -8,6 +8,7 @@ import { ThemeToggle } from "./ThemeToggle";
 
 const links = [
   ["#consultation", "AI 자금진단"],
+  ["#notices", "공고 찾기"],
   ["#how", "이용 방법"],
   ["#plans", "진단 서비스"],
   ["#cases", "상담 사례"],

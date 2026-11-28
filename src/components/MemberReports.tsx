@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { PartnerConsultations } from "./PartnerConsultations";
+import { MemberFollowups } from "./MemberFollowups";
+import { ReportReview } from "./ReportReview";
 import type { User } from "@supabase/supabase-js";
 import { memberClient as client } from "../member-client";
 import type { ConsultationReport } from "../engines/consultation-report";
@@ -82,6 +84,8 @@ export function MemberReports({ report, onOpen }: { report: ConsultationReport |
           <button disabled={busy} onClick={() => void run(async () => { const { error } = await client.auth.signOut(); if (error) throw error; setRows([]); setMessage("로그아웃했습니다."); })}>로그아웃</button>
         </div><p>최근 보고서 100개를 표시합니다. 보고서 생성 후 ‘현재 보고서 보관’을 눌러 저장하세요.</p>
         <PartnerConsultations key={user.id + (report?.id || "")} user={user.id} report={report}/>
+        <MemberFollowups key={"followups-" + user.id} user={user.id} report={report}/>
+        <ReportReview key={"reviews-" + user.id + (report?.id||"")} user={user.id} report={report}/>
         {earlier && report && <section><h3>지난 진단과 비교</h3>
           <p>{earlier.profile?.period || earlier.createdAt.slice(0,10)} → {currentProfile?.period || report.createdAt.slice(0,10)}</p>
           <p>진단 상태 · {earlier.diagnosis.status} → {report.diagnosis.status}</p>

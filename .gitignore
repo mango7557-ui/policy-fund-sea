@@ -24,9 +24,12 @@ src/data/learned-memory.json
 .env
 .env.*
 !.env.example
+!.env.integrations.example
 
 # misc
 .DS_Store
 *.pem
 tsconfig.tsbuildinfo
 next-env.d.ts
+
+.implementation/

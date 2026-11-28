@@ -2,6 +2,7 @@ export type FundingNeeds = {
   facility: number; working: number; development: number; operating: number;
   debt: number; duplicate: number; internal: number; investment: number; own: number;
 };
+export type FundingPlan = { values: FundingNeeds; business: string; stage: string; evidence: string; risk: string; calculatedAt: string };
 
 /** All amounts cover the same three-year period and use the same unit. */
 export function calculateFundingNeeds(input: FundingNeeds) {

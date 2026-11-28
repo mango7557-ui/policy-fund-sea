@@ -58,6 +58,8 @@ $env:TEMP = Join-Path $rootPath 'temp'
 $env:TMP = $env:TEMP
 $env:NEXT_TELEMETRY_DISABLED = '1'
 $env:NODE_ENV = 'production'
+$modelSetting = Get-Content -LiteralPath (Join-Path $site '.env.local') | Where-Object { $_ -match '^OLLAMA_MODEL=' } | Select-Object -Last 1
+$env:OLLAMA_MODEL = if ($modelSetting) { ($modelSetting -split '=',2)[1].Trim().Trim('"').Trim("'") } else { 'qwen2.5:7b' }
 $env:BAREUN_DATA_DIR = Join-Path $site '.data'
 $env:TRAINING_DATA_FILE = Join-Path $env:BAREUN_DATA_DIR 'training.json'
 if (-not $env:GSK_CONFIG) { $env:GSK_CONFIG = Join-Path $site '.data\genspark-config.json' }
@@ -70,7 +72,7 @@ if ($Action -eq 'Build') {
     foreach ($folder in @($env:TEMP, (Join-Path $runtime 'logs'))) {
         [void][IO.Directory]::CreateDirectory($folder)
     }
-    foreach ($item in @('src','public','package.json','package-lock.json','tsconfig.json','next.config.ts','postcss.config.mjs')) {
+    foreach ($item in @('src','public','scripts','package.json','package-lock.json','tsconfig.json','next.config.ts','postcss.config.mjs')) {
         Copy-Item -LiteralPath (Join-Path $site $item) -Destination $release -Recurse
     }
     Push-Location -LiteralPath $release
