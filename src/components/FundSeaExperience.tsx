@@ -268,14 +268,19 @@ export default function FundSeaExperience() {
       // Ignore storage access errors
     }
 
-    (async () => {
+    let disposed = false;
+    let checking = false;
+    const checkConnection = async () => {
+      if (checking || document.hidden) return;
+      checking = true;
+      try {
       for (const url of await chatEndpoints()) {
         try {
-          const res = await fetch(url, { method: "GET" });
+          const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(5000) });
           const ct = res.headers.get("content-type") || "";
           if (res.ok && ct.includes("application/json")) {
             const info = await res.json();
-            if (info?.connected) {
+            if (!disposed && info?.connected) {
               setAiConnected(true);
               if (info.ollamaModel) setOllamaModel(String(info.ollamaModel));
               if (info.geminiModel) setGeminiModel(String(info.geminiModel));
@@ -288,7 +293,19 @@ export default function FundSeaExperience() {
           // Try next candidate
         }
       }
-    })();
+      if (!disposed) setAiConnected(false);
+      } finally { checking = false; }
+    };
+    void checkConnection();
+    const timer = window.setInterval(checkConnection, 60000);
+    window.addEventListener("online", checkConnection);
+    document.addEventListener("visibilitychange", checkConnection);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      window.removeEventListener("online", checkConnection);
+      document.removeEventListener("visibilitychange", checkConnection);
+    };
   }, []);
 
   useEffect(() => {
@@ -472,7 +489,9 @@ export default function FundSeaExperience() {
     }
 
     // 2. 로컬/서버 AI 라우트(Ollama Gemma 4 & Gemini) 호출
-    for (const apiUrl of await chatEndpoints()) {
+    const endpoints = await chatEndpoints();
+    for (const apiUrl of endpoints.length === 1 ? [endpoints[0], endpoints[0]] : endpoints) {
+      if (activeRunId.current !== runId) break;
       try {
         const signal = AbortSignal.timeout(120000);
         const res = await fetch(apiUrl, {
@@ -529,8 +548,10 @@ export default function FundSeaExperience() {
             if (!complete || !text) throw new Error("incomplete reply");
             if (activeRunId.current === runId) { setAiConnected(true); setOllamaModel(model); }
           } catch {
-            if (!text && activeRunId.current === runId) throw new Error("empty stream");
-            if (text) render(consultationWording(text) + "\n응답이 끊겼어요. 이어서 질문해 주세요.");
+            if (activeRunId.current === runId) {
+              setMessages(prev => prev.filter(m => m.id !== id));
+              throw new Error("retry incomplete response");
+            }
           } finally {
             await reader.cancel().catch(() => {});
           }
