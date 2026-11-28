@@ -208,7 +208,7 @@ export default function FundSeaExperience() {
   const [answers, setAnswers] = useState<Answers>({});
   const [diagnosisStarted, setDiagnosisStarted] = useState(false);
   const [aiEngine, setAiEngine] = useState<"ollama" | "gemini">("ollama");
-  const [ollamaModel, setOllamaModel] = useState<string>("gemma4:latest");
+  const [ollamaModel, setOllamaModel] = useState<string>("qwen2.5:7b");
   const [geminiModel, setGeminiModel] = useState<string>("gemini-3-flash-preview");
   const [aiConnected, setAiConnected] = useState(false);
   const [customApiKey, setCustomApiKey] = useState<string>("");
@@ -488,7 +488,7 @@ export default function FundSeaExperience() {
       }
     }
 
-    // 2. 로컬/서버 AI 라우트(Ollama Gemma 4 & Gemini) 호출
+    // 2. 로컬/서버 AI 라우트(Ollama Qwen 2.5 & Gemini) 호출
     const endpoints = await chatEndpoints();
     for (const apiUrl of endpoints.length === 1 ? [endpoints[0], endpoints[0]] : endpoints) {
       if (activeRunId.current !== runId) break;
@@ -514,7 +514,7 @@ export default function FundSeaExperience() {
         if (res.ok && res.body && contentType.includes("application/x-ndjson")) {
           const reader = res.body.getReader();
           const decoder = new TextDecoder();
-          const model = res.headers.get("X-Chat-Model") || "gemma4:latest";
+          const model = res.headers.get("X-Chat-Model") || "qwen2.5:7b";
           const source = "Ollama (" + model + ")";
           const id = "ai-" + runId;
           const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -902,7 +902,7 @@ export default function FundSeaExperience() {
                       onClick={() => setAiEngine(prev => prev === "ollama" ? "gemini" : "ollama")}
                       aria-label="사용할 AI 엔진 전환"
                     >
-                      {aiEngine === "ollama" ? "Gemma 4" : "Gemini"}
+                      {aiEngine === "ollama" ? "Qwen 2.5" : "Gemini"}
                     </button>
                   ) : (
                     <span className="chat-mode-label">문서 기반</span>
@@ -1616,7 +1616,7 @@ export default function FundSeaExperience() {
                   ? "대화 화면은 새로고침하면 초기화됩니다. 상담에서 추출한 기억과 선호 말투는 이 브라우저에 저장되어 다음 상담에 활용됩니다. AI 연결 시 입력 내용과 상담 기억이 해당 AI 제공자에게 전달됩니다. 상담 메모는 기기에 내려받을 수 있습니다."
                   : modal === "연간 BASIC" ? "연 99,000원으로 설계한 상품입니다. 무료진단이나 19,000원 기본 리포트 후 이용하며, 검증된 맞춤공고와 분기 재진단을 제공합니다. 기본 리포트 제공 횟수와 할인은 출시 시 확정합니다. 59,000원 정밀전략 리포트와 실행컨설팅은 별도입니다. 현재 자동 알림과 결제는 준비 중입니다."
                   : modal === "서비스 이용 안내"
-                  ? "현재는 질문은행과 AI(Gemma 4 / Gemini)를 결합한 대화형 사전 안내 버전입니다. 실시간 정책조회, 금융기관 접수 및 결제는 연결되어 있지 않습니다. 결과를 실제 신청에 활용하기 전 공식 공고와 기업 자료를 확인해야 합니다."
+                  ? "현재는 질문은행과 AI(Qwen 2.5 / Gemini)를 결합한 대화형 사전 안내 버전입니다. 실시간 정책조회, 금융기관 접수 및 결제는 연결되어 있지 않습니다. 결과를 실제 신청에 활용하기 전 공식 공고와 기업 자료를 확인해야 합니다."
                   : `${modal}은 ${
                       modal === "맞춤 방향 진단"
                         ? "19,000원 · 접수 후 영업일 1일 이내"
