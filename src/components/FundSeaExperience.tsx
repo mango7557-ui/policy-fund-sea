@@ -448,7 +448,8 @@ export default function FundSeaExperience() {
             directJson?.candidates?.[0]?.content?.parts
               ?.map((p: { text?: string }) => p?.text ?? "")
               .join("")
-              .trim() || fallback.text;
+              .trim();
+          if (!directText) throw new Error("Empty Gemini reply");
           setAiConnected(true);
           setGeminiModel("gemini-2.5-flash");
           return {
@@ -633,6 +634,31 @@ export default function FundSeaExperience() {
       text: interviewReply(answers), time: nowTimeLabel() }]);
   };
 
+  const deliverInterview = async (runId: number, message: string, updated: Answers) => {
+    let text = interviewReply(updated, answers);
+    let source = "바른자금 기본 진단";
+    if (aiConnected && aiEngine === "ollama" && nextQuestion(updated)) {
+      for (const url of await chatEndpoints()) {
+        try {
+          const res = await fetch(url, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "interview", engine: "ollama", message, answers: updated,
+              history: messages.slice(-4).map(({ role, text }) => ({ role, text })) }),
+            signal: AbortSignal.timeout(18000),
+          });
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (data.mode === "interview" && data.provider === "ollama" && data.text) {
+            text = data.text;
+            source = data.source;
+            break;
+          }
+        } catch { /* Continue with the locally calculated question. */ }
+      }
+    }
+    await deliverHumanLikeAssistantTurn(runId, { text, source });
+  };
+
   const chooseAnswer = async (key: AnswerKey, value: string, label: string) => {
     if (busy) return;
     const updated = answerQuestion(answers, key, value);
@@ -671,7 +697,7 @@ export default function FundSeaExperience() {
       setTimeout(() => setLearnToast(null), 4000);
     }
 
-    await deliverHumanLikeAssistantTurn(runId, { text: interviewReply(updated, answers), source: "바른자금 기본 진단" });
+    await deliverInterview(runId, label, updated);
   };
 
   const send = async (value = input) => {
@@ -728,7 +754,8 @@ export default function FundSeaExperience() {
       const diagnosis = freeDiagnosis(updatedAnswers);
       const preview = wantsResult && nextQuestion(updatedAnswers)
         ? "지금까지의 잠정 결과예요. " + diagnosis.status + " " + diagnosis.reasons.join(" ") + "\n" : "";
-      await deliverHumanLikeAssistantTurn(runId, { text: preview + interviewReply(updatedAnswers, answers), source: "바른자금 기본 진단" });
+      if (wantsResult) await deliverHumanLikeAssistantTurn(runId, { text: preview + interviewReply(updatedAnswers, answers), source: "바른자금 기본 진단" });
+      else await deliverInterview(runId, text, updatedAnswers);
       return;
     }
     if (responding && /^(네|예|아니요|아뇨|응|아니|맞아요)[.! ]*$/.test(text)) {
@@ -909,7 +936,7 @@ export default function FundSeaExperience() {
                               <img src="/jeongchaegi.svg" alt="" width={28} height={28} />
                             </span>
                             <span className="message-name">
-                              정책이 <span>상담사</span>
+                              정책이 <span>{m.source?.startsWith("Ollama (") ? m.source.replace(/^Ollama \((.*)\)$/, "$1") : m.source?.startsWith("Gemini") ? m.source : "문서 기반 안내"}</span>
                             </span>
                           </div>
                         )}

@@ -115,3 +115,17 @@ it("leads a consultation through each outstanding question and ends with an acti
   const first = interviewReply({});
   expect(extractAnswersFromText({}, "잘 모르겠어요", first).purpose).toBe("unknown");
 });
+
+it("understands a short business-form reply and advances without inferring an entity from personal expenses", () => {
+  const previous = {purpose: "working"};
+  const prompt = interviewReply(previous);
+  for (const answer of ["개인", "개인이요", "개인입니다"]) {
+    const updated = extractAnswersFromText(previous, answer, prompt);
+    expect(updated.entity).toBe("sole");
+    expect(nextQuestion(updated)?.key).toBe("operation");
+    const operating = extractAnswersFromText(updated, "응", interviewReply(updated, previous));
+    expect(nextQuestion(operating)?.key).toBe("tax");
+    expect(interviewReply(updated, previous)).not.toContain("아니면 법인");
+  }
+  expect(extractAnswersFromText(previous, "개인 대출", prompt).entity).toBeUndefined();
+});

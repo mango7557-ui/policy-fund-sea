@@ -57,6 +57,11 @@ export function extractAnswersFromText(current: Answers, rawText: string, previo
     next.purpose = "working";
   }
 
+  // A bare "개인" identifies the business only in response to a business-form question.
+  const short = t.replace(/[.!~\s]/g, "").replace(/(?:이에요|이예요|이요|입니다|이야|요)$/, "");
+  const askedAboutEntity = /개인\s*사업자|사업자\s*(형태|유형)|법인으로/.test(previousReply);
+  if (askedAboutEntity && /^(개인|개인사업)$/.test(short)) next.entity = "sole";
+
   // 2. 사업자 형태 (entity)
   if (/법인|주식회사|\(주\)|㈜/.test(t)) {
     next.entity = "corporation";
@@ -123,7 +128,7 @@ export function extractAnswersFromText(current: Answers, rawText: string, previo
     }
     if (currentPending.key === "finance" && /적자|부채가 많/.test(t)) next.finance = "weak";
     if (currentPending.key === "credit" && /회생|신용회복/.test(t) && !/없/.test(t)) next.credit = "review";
-    if (currentPending.key === "operation" && /^(네|예|정상|잘\s*돌아가요|영업중이에요)/.test(t)) {
+    if (currentPending.key === "operation" && (/^(네|예|응|맞아(?:요)?|영업\s*중(?:이(?:에요|야)|이에요)?)[.!~ ]*$/.test(t) || /정상\s*영업|잘\s*돌아가요/.test(t))) {
       next.operation = "active";
     } else if (currentPending.key === "tax" && /^(없어요|없습니다|깨끗해요|완납)/.test(t)) {
       next.tax = "none";
@@ -241,6 +246,7 @@ export function interviewReply(answers: Answers, previous?: Answers) {
   if (previous && changed) {
     const value = answers[changed.key];
     if (value === "unknown") lead = "그 부분은 나중에 확인할 내용으로 남겨둘게요.";
+    else if (changed.key === "entity") lead = value === "sole" ? "개인사업자로 운영하고 계시군요." : value === "corporation" ? "법인으로 운영하고 계시군요." : "창업을 준비하고 계시는군요.";
     else if (changed.key === "purpose") lead = ({ working: "사업 운영에 쓸 돈이 필요하시군요.", facility: "시설 투자를 준비하고 계시는군요.", refinance: "기존 대출의 이자 부담을 줄이고 싶으시군요." })[value as "working" | "facility" | "refinance"] || "";
     else if (value === "active" && ["tax", "overdue"].includes(changed.key)) lead = "말씀해 주셔서 고맙습니다. 이 부분은 신청 전에 별도로 확인하도록 표시할게요.";
   }

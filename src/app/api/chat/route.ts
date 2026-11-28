@@ -296,6 +296,18 @@ export async function POST(req: NextRequest) {
       return jsonWithCors({ error: "질문 내용을 입력해 주세요." }, 400);
     }
 
+    if (body.mode === "interview") {
+      const question = formatHumanFollowUpQuestion(rawAnswers);
+      const lead = await callOllamaChat({
+        model: OLLAMA_MODEL, history: history.slice(-3), message,
+        systemInstruction: "한국어 자금 상담 중입니다. 사용자가 방금 알려준 사실을 일상적인 존댓말 한 문장으로만 받아 주세요. 질문이나 추천은 쓰지 마세요. 직전 질문을 다시 묻지 마세요. 확인된 상황: " + summarizeKnownFacts(rawAnswers),
+      });
+      const acknowledgement = typeof lead === "string" ? lead.trim().split(/[?？]/)[0].match(/^[^.!?？\n]+[.!](?:\s|$)/)?.[0].trim() : "";
+      if (acknowledgement) return jsonWithCors({ mode: "interview", provider: "ollama", model: OLLAMA_MODEL,
+        source: "Ollama (" + OLLAMA_MODEL + ")", text: acknowledgement + " " + question });
+      return jsonWithCors({ mode: "interview", provider: "rule-fallback" });
+    }
+
     // Personal memory remains per browser; only authenticated published knowledge is shared.
     const baseEvoState: JeongchaegiEvolutionState =
       body?.evolutionState && typeof body.evolutionState === "object"
@@ -321,14 +333,14 @@ export async function POST(req: NextRequest) {
     if (isCasualGreeting) {
       return jsonWithCors({
         text: `네, 안녕하세요 대표님! 반갑습니다 😊 무엇을 도와드릴까요? 요즘 사업하시면서 자금 쪽으로 어떤 고민이 있으신지 편하게 말씀해 주세요~`,
-        source: preferredEngine === "ollama" ? `Ollama (${OLLAMA_MODEL})` : "Gemini",
+        source: "정책이 상담 가이드",
         coreId: null,
         links: [],
         isGreeting: true,
         updatedAnswers: answers,
         evolutionState: evolvedState,
         newlyLearned,
-        provider: preferredEngine,
+        provider: "rule-fallback",
       });
     }
 
