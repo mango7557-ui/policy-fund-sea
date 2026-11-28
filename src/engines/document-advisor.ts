@@ -37,6 +37,12 @@ export function answerQuestion(answers: Answers, key: AnswerKey, value: string):
  * 대표님이 채팅창에 자연어로 말씀하신 내용에서 진단 항목을 자동으로 추출·누적하여
  * 이미 답한 질문을 다시 묻지 않고 대화가 계속 다음 단계로 이어지게 한다.
  */
+const paymentQuestions = {
+  card: "카드 결제일이 지났는데 아직 못 내신 금액이 있나요?",
+  loan: "대출 상환일이 지났는데 아직 못 내신 금액이 있나요?",
+};
+const paymentReminder = "정확히 모르시면 이 항목은 건너뛰어도 괜찮아요.";
+
 export function extractAnswersFromText(current: Answers, rawText: string, previousReply = ""): Answers {
   const original = rawText.trim();
   const t = original.replace(/^[^.!?]*(?:말고|아니라|아니고)\s*(?=\S)/, "");
@@ -50,10 +56,16 @@ export function extractAnswersFromText(current: Answers, rawText: string, previo
   const next: Answers = { ...current };
 
   const pending = nextQuestion(current);
-  const prompted = pending && previousReply.endsWith(pending.text);
+  const prompted = pending && (previousReply.endsWith(pending.text) ||
+    (pending.key === "overdue" && (previousReply.endsWith(paymentReminder) || Object.values(paymentQuestions).some(question => previousReply.includes(question)))));
   if (pending?.key === "purpose" && /^(운영|운영비|운영자금)(이요|이야|요)?[.!~ ]*$/.test(t)) return { ...current, purpose: "working" };
   if (prompted) {
     const short = t.replace(/[.!~\s]/g, "");
+    if (pending.key === "overdue") {
+      if (/^(?:지금은|이제는|이미)?(?:다|전부)?(?:갚았|냈어|납부했|결제했)(?:어요|요|습니다)?$/.test(short)) return { ...current, overdue: "cleared" };
+      if (/^(?:아직)?(?:못냈|못냈어|못갚았|밀렸)(?:어요|요|습니다)?$/.test(short)) return { ...current, overdue: "active" };
+      if (/^(?:몰라요|모르겠어요|건너뛸게요|넘어갈게요)$/.test(short)) return { ...current, overdue: "unknown" };
+    }
     const choice = pending.choices.find(c => c.label.replace(/\s/g, "") === short);
     if (choice) return { ...current, [pending.key]: choice.value };
 
@@ -278,6 +290,15 @@ type ConversationTurn = { role: "user" | "assistant"; text: string };
 export function conversationReply(query: string, answers: Answers, history: ConversationTurn[]): string | undefined {
   const words = query.trim().replace(/[.!?~…]+$/, "");
   const previous = history.filter(m => m.role === "assistant").at(-1)?.text || "";
+  if (nextQuestion(answers)?.key === "overdue" &&
+      (previous.includes("밀린 대출금이나 카드값") || Object.values(paymentQuestions).some(q => previous.includes(q)))) {
+    const item = words.match(/^(?:(?:신용)?카드(?:값|대금)?|대출(?:금)?)(?:이요|요|예요|이에요)?$/);
+    if (item) {
+      const question = words.includes("카드") ? paymentQuestions.card : paymentQuestions.loan;
+      return previous.includes(question) ? "밀린 금액이 있으면 ‘있어요’, 없으면 ‘없어요’를 골라주세요. " + paymentReminder : question;
+    }
+    if (/왜|무슨 뜻|무슨 말/.test(words)) return "결제일이나 상환일이 이미 지났는지 여쭤본 거예요. 아직 날짜가 안 됐다면 ‘없어요’를 고르시면 돼요.";
+  }
   const purpose = { working: "운영비", facility: "기계·시설 마련", refinance: "기존 대출의 이자 부담 줄이기" }[answers.purpose as "working" | "facility" | "refinance"];
   if (/^(고마워요?|감사합니다|고맙습니다|고마워|감사해요|잘 알겠어요)$/.test(words))
     return "도움이 됐다니 다행이에요. 나중에 궁금한 게 생기면 여기서 이어서 이야기해요.";

@@ -151,3 +151,16 @@ it("holds recommendations for nonprofit and audit review while preserving exempt
   expect(freeDiagnosis({profile:{form:"영리법인",audit:"예",auditReport:"예",opinion:"의견거절"}}).branch?.routes).toEqual([]);
   expect(freeDiagnosis({profile:{form:"영어조합법인"}}).branch?.routes.join(" ")).toContain("수산");
 });
+
+it("clarifies a payment type before recording arrears", () => {
+  const answers = { purpose: "working", entity: "sole", operation: "active", tax: "none" };
+  const asked = interviewReply(answers);
+  const clarify = conversationReply("카드", answers, [{role:"assistant", text:asked}])!;
+  expect(clarify).toContain("카드 결제일");
+  expect(extractAnswersFromText(answers, "카드", asked)).toEqual(answers);
+  expect(extractAnswersFromText(answers, "네", clarify).overdue).toBe("active");
+  expect(extractAnswersFromText(answers, "아니요", clarify).overdue).toBe("none");
+  const reminder = conversationReply("카드", answers, [{role:"assistant", text:clarify}])!;
+  expect(reminder).not.toContain(clarify);
+  expect(extractAnswersFromText(answers, "건너뛸게요", reminder).overdue).toBe("unknown");
+});
