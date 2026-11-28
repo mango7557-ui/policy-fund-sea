@@ -7,6 +7,7 @@ import { publicOrigin } from "./src/public-site.mjs";
 export const siteTitle = "바른자금 | 기업 자금조달 진단과 상담";
 export const siteDescription = "기업의 자금 용도와 경영 상황을 바탕으로 바른자금에서 자금조달 방향, 판단 근거와 준비할 서류를 확인하세요.";
 const siteUrl = publicOrigin + "/";
+const shareImage = "https://raw.githubusercontent.com/mango7557-ui/policy-fund-sea/main/docs/bareun-share.jpg";
 const themeInit = `(function(){try{var t=localStorage.getItem('bareunfund-theme')||localStorage.getItem('fundsea-theme');document.documentElement.dataset.theme=t==='dark'?'dark':'light'}catch(e){document.documentElement.dataset.theme='light'}})();`;
 const stylesheets = ["globals.css", "editorial.css", "admin.css", "maritime.css", "landing-entry.css", "landing-details.css"];
 
@@ -78,10 +79,14 @@ export function renderPage({ body = "", scriptTag, styles, preloads = "", publis
     <meta property="og:site_name" content="바른자금">
     <meta property="og:title" content="${siteTitle}">
     <meta property="og:description" content="${siteDescription}">
-    <meta property="og:url" content="${siteUrl}">
-    <meta property="og:image" content="${siteUrl}bareun-brand.png">
+    <meta property="og:url" content="http://barunfund.kr/">
+    <meta property="og:image" content="${shareImage}">
     <meta property="og:image:alt" content="바른자금 BAREUN FUND">
-    <meta name="twitter:card" content="summary">` : "";
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="${shareImage}">` : "";
   return `<!doctype html>
 <html lang="ko" data-theme="light">
   <head>

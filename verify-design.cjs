@@ -44,8 +44,8 @@ async function verifySite(browser, site) {
     await page.goto(site);
     await page.getByRole('heading', { level: 1, name: /사업에 필요한 자금/ }).waitFor();
     assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'), canonicalSite);
-    assert.equal(await page.locator('meta[property="og:url"]').getAttribute('content'), canonicalSite);
-    assert.equal(await page.locator('meta[property="og:image"]').getAttribute('content'), canonicalSite + 'bareun-brand.png');
+    assert.equal(await page.locator('meta[property="og:url"]').getAttribute('content'), 'http://barunfund.kr/');
+    assert.equal(await page.locator('meta[property="og:image"]').getAttribute('content'), 'https://raw.githubusercontent.com/mango7557-ui/policy-fund-sea/main/docs/bareun-share.jpg');
     for (const width of [1440, 1280, 1024, 768, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Horizontal overflow at ' + width);
