@@ -300,7 +300,7 @@ export async function POST(req: NextRequest) {
       const question = formatHumanFollowUpQuestion(rawAnswers);
       const lead = await callOllamaChat({
         model: OLLAMA_MODEL, history: history.slice(-3), message,
-        systemInstruction: "한국어 자금 상담 중입니다. 금전을 가리킬 때는 자금이라고 표현하세요. 사용자가 방금 알려준 사실을 일상적인 존댓말 한 문장으로만 받아 주세요. 질문이나 추천은 쓰지 마세요. 직전 질문을 다시 묻지 마세요. 확인된 상황: " + summarizeKnownFacts(rawAnswers),
+        systemInstruction: "한국어 자금 상담 중입니다. 금전을 가리킬 때는 자금이라고 표현하세요. 사용자가 방금 말한 상황에 맞춰 짧고 다정한 존댓말 한 문장으로 답하세요. 상투적인 감사 인사나 직전에 쓴 표현은 생략하세요. 질문이나 추천은 쓰지 마세요. 직전 질문을 다시 묻지 마세요. 확인된 상황: " + summarizeKnownFacts(rawAnswers),
       });
       const acknowledgement = typeof lead === "string" ? lead.trim().split(/[?？]/)[0].match(/^[^.!?？\n]+[.!](?:\s|$)/)?.[0].trim() : "";
       if (acknowledgement && acknowledgement.length <= 55) return jsonWithCors({ mode: "interview", provider: "ollama", model: OLLAMA_MODEL,

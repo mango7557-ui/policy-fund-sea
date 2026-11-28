@@ -645,7 +645,8 @@ export default function FundSeaExperience() {
   const deliverInterview = async (runId: number, message: string, updated: Answers) => {
     let text = interviewReply(updated, answers);
     let source = "바른자금 기본 진단";
-    if (aiConnected && aiEngine === "ollama" && nextQuestion(updated)) {
+    const shortAnswer = /^(네|예|응|아니요?|아뇨|있어요|없어요|잘 모르겠어요)[.!~\s]*$/.test(message.trim());
+    if (!shortAnswer && aiConnected && aiEngine === "ollama" && nextQuestion(updated)) {
       for (const url of await chatEndpoints()) {
         try {
           const res = await fetch(url, {
@@ -657,6 +658,9 @@ export default function FundSeaExperience() {
           if (!res.ok) continue;
           const data = await res.json();
           if (data.mode === "interview" && data.provider === "ollama" && data.text) {
+            const lead = String(data.text).split(/[.!?？]/, 1)[0].trim();
+            const repeated = lead && messages.slice(-6).some(turn => turn.role === "assistant" && turn.text.includes(lead));
+            if (repeated || /^(말씀해 주셔서|알려주셔서|감사합니다|고맙습니다)/.test(lead)) break;
             text = data.text;
             source = data.source;
             break;

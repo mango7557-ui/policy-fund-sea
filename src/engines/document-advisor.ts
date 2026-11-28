@@ -239,10 +239,11 @@ export function interviewReply(answers: Answers, previous?: Answers) {
   let lead = "";
   if (previous && changed) {
     const value = answers[changed.key];
-    if (value === "unknown") lead = "그 부분은 나중에 확인할 내용으로 남겨둘게요.";
+    if (value === "unknown") lead = Object.values(previous).includes("unknown") ? "" : "지금 모르셔도 괜찮아요.";
     else if (changed.key === "entity") lead = value === "sole" ? "개인사업자로 운영하고 계시군요." : value === "corporation" ? "법인으로 운영하고 계시군요." : "창업을 준비하고 계시는군요.";
     else if (changed.key === "purpose") lead = ({ working: "운영비가 필요하시군요.", facility: "시설 투자를 준비하고 계시는군요.", refinance: "기존 대출의 이자 부담을 줄이고 싶으시군요." })[value as "working" | "facility" | "refinance"] || "";
-    else if (value === "active" && ["tax", "overdue"].includes(changed.key)) lead = "말씀해 주셔서 고맙습니다. 이 부분은 신청 전에 별도로 확인하도록 표시할게요.";
+    else if (changed.key === "tax" && value === "active") lead = "밀린 세금은 따로 짚어볼게요.";
+    else if (changed.key === "overdue" && value === "active") lead = "상환 부담도 함께 살펴볼게요.";
   }
   return [lead, formatHumanFollowUpQuestion(answers)].filter(Boolean).join(" ");
 }
@@ -353,23 +354,11 @@ export function referenceReply(query: string, currentAnswers: Answers = {}, hist
       coreId: null,
       references: [],
     };
-    const empathy =
-      /힘들|막막|걱정|어렵|죽겠|안\s*돼|바닥|급해/.test(query)
-        ? "걱정이 많으시겠어요. 현재 상황에서 먼저 확인할 수 있는 것부터 함께 살펴볼게요."
-        : /시설|설비|기계|공장/.test(query)
-        ? "이번에 기계나 설비를 새로 들이시려고 하시는군요! 큰맘 먹고 투자하시는 만큼 이자 부담 적고 조건 좋은 자금으로 잘 맞춰봐야죠."
-        : /운전|인건비|월세|운영|원재료|식당|가게/.test(query)
-        ? "맞아요, 사업하다 보면 다달이 나가는 인건비랑 재료비, 월세 챙기는 게 제일 큰일이죠. 숨통이 좀 트이실 수 있게 운전자금 쪽부터 같이 찾아봐요."
-        : /개인사업자|자영업|소상공인|카페/.test(query)
-        ? "개인사업자로 운영하고 계시는군요! 혼자 다 챙기시려면 신경 쓸 게 한두 가지가 아니실 텐데, 소진공이나 지역신보 쪽으로 잘 맞는지 제가 바로 봐드릴게요."
-        : /법인/.test(query)
-        ? "법인으로 운영 중이시군요! 법인은 매출 흐름이랑 기술·인증 같은 강점을 잘 살리면 중진공이나 기보·신보에서 꽤 든든하게 길을 찾을 수 있어요."
-        : /없어요|없습니다|깨끗|정상/.test(query)
-        ? "정말 다행이네요 대표님! 그런 기본 조건이 깔끔하면 우리가 골라볼 수 있는 정책자금 선택지가 훨씬 넓어지거든요."
-        : "말씀해 주셔서 고맙습니다. 상황에 맞는 방향을 살펴볼게요.";
-
+    const concerned = /힘들|막막|걱정|어렵|급해/.test(query);
+    const reassurance = "마음이 급하실 수 있어요.";
+    const alreadySaid = history.some(turn => turn.role === "assistant" && turn.text.includes(reassurance));
     return {
-      text: `${empathy} ${followUpPrompt}`,
+      text: concerned && !alreadySaid ? reassurance + " " + followUpPrompt : followUpPrompt,
       coreId: null,
       references: [],
     };
