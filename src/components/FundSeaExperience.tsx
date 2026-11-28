@@ -674,11 +674,11 @@ export default function FundSeaExperience() {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ mode: "interview", engine: "ollama", message, answers: {...updated, profile: undefined},
               history: messages.slice(-4).map(({ role, text }) => ({ role, text })) }),
-            signal: AbortSignal.timeout(18000),
+            signal: AbortSignal.timeout(120000),
           });
           if (!res.ok) continue;
           const data = await res.json();
-          if (data.mode === "interview" && data.provider === "ollama" && data.text) {
+          if (data.provider === "ollama" && typeof data.text === "string" && data.text.trim()) {
             const lead = String(data.text).split(/[.!?？]/, 1)[0].trim();
             const repeated = lead && messages.slice(-6).some(turn => turn.role === "assistant" && turn.text.includes(lead));
             if (repeated || /^(말씀해 주셔서|알려주셔서|감사합니다|고맙습니다)/.test(lead)) break;
