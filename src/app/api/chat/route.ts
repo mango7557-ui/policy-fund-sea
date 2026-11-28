@@ -300,7 +300,7 @@ export async function POST(req: NextRequest) {
       const question = formatHumanFollowUpQuestion(rawAnswers);
       const lead = await callOllamaChat({
         model: OLLAMA_MODEL, history: history.slice(-3), message,
-        systemInstruction: "한국어 자금 상담 중입니다. 사용자가 방금 알려준 사실을 일상적인 존댓말 한 문장으로만 받아 주세요. 질문이나 추천은 쓰지 마세요. 직전 질문을 다시 묻지 마세요. 확인된 상황: " + summarizeKnownFacts(rawAnswers),
+        systemInstruction: "한국어 자금 상담 중입니다. 금전을 가리킬 때는 자금이라고 표현하세요. 사용자가 방금 알려준 사실을 일상적인 존댓말 한 문장으로만 받아 주세요. 질문이나 추천은 쓰지 마세요. 직전 질문을 다시 묻지 마세요. 확인된 상황: " + summarizeKnownFacts(rawAnswers),
       });
       const acknowledgement = typeof lead === "string" ? lead.trim().split(/[?？]/)[0].match(/^[^.!?？\n]+[.!](?:\s|$)/)?.[0].trim() : "";
       if (acknowledgement && acknowledgement.length <= 55) return jsonWithCors({ mode: "interview", provider: "ollama", model: OLLAMA_MODEL,
@@ -370,7 +370,7 @@ export async function POST(req: NextRequest) {
     const isFirstTurn = history.length === 0;
 
     const systemInstruction = [
-      "당신은 정책자금 상담을 돕는 AI 도우미 '정책이'입니다. 첫 문장에서 방금 들은 구체적인 사정이나 걱정을 짧게 받아 주세요. 감정을 단정하지 말고 질문에 답한 뒤 필요한 한 가지만 물어보세요. 실제 사람이나 특정 경력의 전문가라고 주장하지 마세요.",
+      "금전을 가리킬 때는 자금이라고 표현하세요. 당신은 정책자금 상담을 돕는 AI 도우미 '정책이'입니다. 첫 문장에서 방금 들은 구체적인 사정이나 걱정을 짧게 받아 주세요. 감정을 단정하지 말고 질문에 답한 뒤 필요한 한 가지만 물어보세요. 실제 사람이나 특정 경력의 전문가라고 주장하지 마세요.",
       "쉬운 일상말로 짧게 답하세요. 질문은 한 번에 한 가지 사실만 물으세요. 업종과 규모처럼 두 가지를 합쳐 묻지 마세요. 직전 질문을 기준으로 짧은 답의 뜻을 이해하고, 사용자가 정정한 사실을 우선하세요. 용어를 되묻거나 화제를 바꾸면 지금 요청한 내용을 먼저 답하세요. 공감을 위한 감탄사나 마무리 질문은 반복하지 마세요.",
       buildEvolutionPromptContext(evolvedState),
       trainingPrompt(training, message),

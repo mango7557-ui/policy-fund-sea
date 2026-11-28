@@ -5,7 +5,7 @@ import { Answers } from "../engines/document-advisor";
 import { createConsultationReport, ConsultationReport as Report, ReportMessage, reportText } from "../engines/consultation-report";
 import { fieldsFor } from "../engines/business-branches";
 
-export function ConsultationReport({ answers, messages, busy }: { answers: Answers; messages: ReportMessage[]; busy: boolean }) {
+export function ConsultationReport({ answers, messages, busy, onRecheck }: { answers: Answers; messages: ReportMessage[]; busy: boolean; onRecheck: (report: Report) => void }) {
   const [report, setReport] = useState<Report | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (report) dialog.current?.showModal(); }, [report]);
@@ -25,7 +25,7 @@ export function ConsultationReport({ answers, messages, busy }: { answers: Answe
     <MemberReports report={report} onOpen={setReport} />
     <dialog className="consultation-report-dialog" ref={dialog} onClose={() => setReport(null)} aria-labelledby="consultation-report-title">
       {report && <>
-        <MemberReports report={report} onOpen={setReport} /><div className="report-actions"><button type="button" onClick={() => window.print()}>인쇄 · PDF 저장</button><button type="button" onClick={download}>보고서 내려받기</button><button type="button" onClick={() => dialog.current?.close()}>닫기</button></div>
+        <MemberReports report={report} onOpen={setReport} /><div className="report-actions"><button type="button" disabled={busy} onClick={() => { if (window.confirm("지금 열린 상담을 마치고 이 보고서의 기업·사업장 정보로 새 진단을 시작할까요?")) { dialog.current?.close(); onRecheck(report); } }}>이 기업 다시 진단</button><button type="button" onClick={() => window.print()}>인쇄 · PDF 저장</button><button type="button" onClick={download}>보고서 내려받기</button><button type="button" onClick={() => dialog.current?.close()}>닫기</button></div>
         <article>
           <p>바른자금 · 사전 상담 보고서</p>
           <h2 id="consultation-report-title">{report.title}</h2>

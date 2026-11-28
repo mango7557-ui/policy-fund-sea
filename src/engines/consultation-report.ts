@@ -1,3 +1,4 @@
+import { profileFields, CompanyProfile } from "./company-profile";
 import { fieldsFor } from "./business-branches";
 import { Answers, DIAGNOSIS_QUESTIONS, freeDiagnosis } from "./document-advisor";
 
@@ -20,7 +21,8 @@ export function createConsultationReport(answers: Answers, messages: ReportMessa
     id: reportId(),
     createdAt: new Date().toISOString(),
     title: "기업 자금조달 사전 상담 보고서",
-    facts,
+    profile: answers.profile ? {...answers.profile} : undefined as CompanyProfile | undefined,
+    facts: [...facts, ...profileFields(answers.profile || {}).filter(f => answers.profile?.[f.key]).map(f => ({question:f.label, answer:answers.profile![f.key]!}))],
     branchInputs: { ...answers.branch },
     diagnosis,
     messages: messages.map(({ role, text, time, source }) => ({ role, text, time, source })),

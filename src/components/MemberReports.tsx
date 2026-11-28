@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
+import { PartnerConsultations } from "./PartnerConsultations";
 import type { User } from "@supabase/supabase-js";
 import { memberClient as client } from "../member-client";
 import type { ConsultationReport } from "../engines/consultation-report";
@@ -40,6 +41,10 @@ export function MemberReports({ report, onOpen }: { report: ConsultationReport |
     try { await action(); } catch { setMessage("요청을 완료하지 못했습니다. 입력 내용과 연결 상태를 확인한 뒤 다시 시도해 주세요."); }
     finally { setBusy(false); }
   }
+  const currentProfile = report?.profile;
+  const earlier = currentProfile?.companyId && currentProfile.siteId ? rows.filter(row => row.report.profile?.companyId === currentProfile.companyId
+    && row.report.profile?.siteId === currentProfile.siteId && row.report.createdAt < report!.createdAt)
+    .sort((a,b) => b.report.createdAt.localeCompare(a.report.createdAt))[0]?.report : undefined;
   async function save() {
     if (!report || !user) return;
     const { error } = await client.from("bareunfund_reports").insert({ id: report.id, user_id: user.id, title: report.title, report });
@@ -76,6 +81,13 @@ export function MemberReports({ report, onOpen }: { report: ConsultationReport |
           <button disabled={busy} onClick={() => void run(list)}>보관함 새로고침</button>
           <button disabled={busy} onClick={() => void run(async () => { const { error } = await client.auth.signOut(); if (error) throw error; setRows([]); setMessage("로그아웃했습니다."); })}>로그아웃</button>
         </div><p>최근 보고서 100개를 표시합니다. 보고서 생성 후 ‘현재 보고서 보관’을 눌러 저장하세요.</p>
+        <PartnerConsultations key={user.id + (report?.id || "")} user={user.id} report={report}/>
+        {earlier && report && <section><h3>지난 진단과 비교</h3>
+          <p>{earlier.profile?.period || earlier.createdAt.slice(0,10)} → {currentProfile?.period || report.createdAt.slice(0,10)}</p>
+          <p>진단 상태 · {earlier.diagnosis.status} → {report.diagnosis.status}</p>
+          {[["sales","매출"],["debt","차입 잔액"],["guarantee","보증 잔액"]].map(([key,label]) =>
+            <p key={key}>{label} · {earlier.profile?.[key] ? earlier.profile[key] + "만원" : "미입력"} → {currentProfile?.[key] ? currentProfile[key] + "만원" : "미입력"}</p>)}
+        </section>}
         <ul>{rows.map(row => <li key={row.id}><button type="button" onClick={() => { onOpen(row.report); panel.current?.close(); }}>{row.title} · {new Date(row.created_at).toLocaleString("ko-KR")}</button><button disabled={busy} type="button" onClick={() => {
           if (window.confirm("이 보고서를 보관함에서 삭제할까요?")) void run(async () => {
             const { error } = await client.from("bareunfund_reports").delete().eq("id", row.id);

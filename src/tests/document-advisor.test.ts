@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { interviewReply, conversationReply, QUESTION_BANK, POLICY_REFERENCES, PREFERENCE_REFERENCES, DIAGNOSIS_QUESTIONS, Answers, answerQuestion, nextQuestion, freeDiagnosis, searchQuestions, referenceReply, collectionRoute, reportReadiness, extractAnswersFromText, ensureEndsWithFollowUpQuestion } from "../engines/document-advisor";
+import { consultationWording, interviewReply, conversationReply, QUESTION_BANK, POLICY_REFERENCES, PREFERENCE_REFERENCES, DIAGNOSIS_QUESTIONS, Answers, answerQuestion, nextQuestion, freeDiagnosis, searchQuestions, referenceReply, collectionRoute, reportReadiness, extractAnswersFromText, ensureEndsWithFollowUpQuestion } from "../engines/document-advisor";
 import manifest from "../data/master/manifest.json";
 import samples from "../data/master/sample-cases.json";
 
@@ -84,7 +84,7 @@ describe("문서 기반 UAT 회귀검증", () => {
 
 it("acknowledges the sole proprietor and follows the stated expense on the next turn", () => {
   const first = "개인 사업자인데 자금이 필요해?";
-  expect(referenceReply(first).text).toMatch(/^개인사업.*돈을 어디에/);
+  expect(referenceReply(first).text).toMatch(/^개인사업.*자금을 어디에/);
   const next = referenceReply("월세가 급해요", extractAnswersFromText({}, first));
   expect(next.text).toMatch(/^월세.*사업장을 운영/);
 });
@@ -138,4 +138,16 @@ it("handles the one-word operating expense reply and asks one matching question 
   expect(second).toBe("운영비가 필요하시군요. 개인사업자세요, 법인사업자세요?");
   expect(extractAnswersFromText(working, "개인", second).entity).toBe("sole");
   for (const q of DIAGNOSIS_QUESTIONS) expect(q.text.match(/\?/g)).toHaveLength(1);
+});
+
+it("uses 자금 in replies and leaves the user's terminology and unrelated words intact", () => {
+  expect(consultationWording("돈을 어디에 쓰실까요? 돈이 필요하면 정돈된 돈가스 가게도 살펴봐요.")).toBe("자금을 어디에 쓰실까요? 자금이 필요하면 정돈된 돈가스 가게도 살펴봐요.");
+  expect(referenceReply("개인사업자인데 돈이 필요해?").text).toContain("자금을 어디에");
+});
+it("holds recommendations for nonprofit and audit review while preserving exempt business guidance", () => {
+  const reviewed = freeDiagnosis({profile:{form:"사단법인",vat:"면세"}});
+  expect(reviewed.branch?.hold).toBe(true);
+  expect(reviewed.reasons.join(" ")).toContain("면세 매출");
+  expect(freeDiagnosis({profile:{form:"영리법인",audit:"예",auditReport:"예",opinion:"의견거절"}}).branch?.routes).toEqual([]);
+  expect(freeDiagnosis({profile:{form:"영어조합법인"}}).branch?.routes.join(" ")).toContain("수산");
 });

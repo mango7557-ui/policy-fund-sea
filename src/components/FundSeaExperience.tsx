@@ -25,6 +25,7 @@ import {
   AnswerKey,
   nextQuestion,
   interviewReply,
+  consultationWording,
   freeDiagnosis,
   referenceReply,
   conversationReply,
@@ -45,6 +46,7 @@ import {
 import { QuestionLibrary, ReportSamples } from "./DocumentTools";
 import { FundingEntry, SiteHeader } from "./HomepageEntry";
 import { FundingNavigator } from "./FundingNavigator";
+import { CompanyProfileFields } from "./CompanyProfileFields";
 import { BusinessBranchFields } from "./BusinessBranchFields";
 import { ConsultationReport } from "./ConsultationReport";
 import guide from "../data/management-guide.json";
@@ -153,6 +155,12 @@ const plans = [
     ],
     button: "제공 내용 자세히 보기",
     tier: "L3",
+  },
+  {
+    name: "연간 BASIC", tag: "출시 준비 중", price: "99,000", tier: "BASIC",
+    sub: "기업 한 곳의 1년 자금관리",
+    items: ["업종·지역에 맞는 검증 공고 알림", "분기별·주요 변화 시 재진단", "지난 진단과 매출·차입·보증 변화 비교"],
+    button: "구독 구성 보기",
   },
 ];
 
@@ -342,7 +350,7 @@ export default function FundSeaExperience() {
       prev.map((m) => (m.unread ? { ...m, unread: false } : m))
     );
 
-    const text = reply.text.replace(/\*\*/g, "").trim();
+    const text = consultationWording(reply.text.replace(/\*\*/g, "").trim());
     const characters = Array.from(text);
     const instant = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const id = `ai-${runId}`;
@@ -428,7 +436,7 @@ export default function FundSeaExperience() {
               systemInstruction: {
                 parts: [
                   {
-                    text: `당신은 정책자금 상담 도우미 '정책이'입니다. 첫 문장은 방금 들은 구체적인 사정이나 걱정을 짧게 받아 주세요. 이어서 질문에 직접 답하고 다음에 필요한 한 가지만 물어보세요. 감정을 짐작해 단정하거나 같은 위로를 되풀이하지 마세요. 모르는 내용은 모른다고 말하고 승인이나 금액을 단정하지 마세요. 과장된 공감이나 반복 인사 없이 간결하고 자연스러운 존댓말을 쓰세요. 답에 필요한 경우에만 질문을 하나 하세요. 이미 파악된 정보(${knownSummary})는 다시 묻지 마세요. 참고할 다음 진단 항목: ${upcoming?.text ?? "없음"}.\n${evoContext}`,
+                    text: `금전을 가리킬 때는 자금이라고 표현하세요. 당신은 정책자금 상담 도우미 '정책이'입니다. 첫 문장은 방금 들은 구체적인 사정이나 걱정을 짧게 받아 주세요. 이어서 질문에 직접 답하고 다음에 필요한 한 가지만 물어보세요. 감정을 짐작해 단정하거나 같은 위로를 되풀이하지 마세요. 모르는 내용은 모른다고 말하고 승인이나 금액을 단정하지 마세요. 과장된 공감이나 반복 인사 없이 간결하고 자연스러운 존댓말을 쓰세요. 답에 필요한 경우에만 질문을 하나 하세요. 이미 파악된 정보(${knownSummary})는 다시 묻지 마세요. 참고할 다음 진단 항목: ${upcoming?.text ?? "없음"}.\n${evoContext}`,
                   },
                 ],
               },
@@ -474,7 +482,7 @@ export default function FundSeaExperience() {
             stream: aiEngine === "ollama",
             message: userText,
             history: historySnapshot,
-            answers: currentAnswers,
+            answers: {...currentAnswers, profile: undefined},
             evolutionState: currentEvo,
             trainingEntries: training.filter(e => e.status === "published"),
             engine: aiEngine,
@@ -515,14 +523,14 @@ export default function FundSeaExperience() {
                 text += event.message?.content || "";
                 complete = event.done === true;
               }
-              if (text && (!reducedMotion || complete)) render(text);
+              if (text && (!reducedMotion || complete)) render(consultationWording(text));
               if (part.done) break;
             }
             if (!complete || !text) throw new Error("incomplete reply");
             if (activeRunId.current === runId) { setAiConnected(true); setOllamaModel(model); }
           } catch {
             if (!text && activeRunId.current === runId) throw new Error("empty stream");
-            if (text) render(text + "\n응답이 끊겼어요. 이어서 질문해 주세요.");
+            if (text) render(consultationWording(text) + "\n응답이 끊겼어요. 이어서 질문해 주세요.");
           } finally {
             await reader.cancel().catch(() => {});
           }
@@ -540,7 +548,7 @@ export default function FundSeaExperience() {
               setGeminiModel(String(data.model));
             }
             if (data.updatedAnswers && typeof data.updatedAnswers === "object") {
-              setAnswers(data.updatedAnswers);
+              setAnswers(previous => ({...data.updatedAnswers, profile: previous.profile}));
             }
             if (data.evolutionState && typeof data.evolutionState === "object") {
               setEvolution(data.evolutionState);
@@ -584,7 +592,7 @@ export default function FundSeaExperience() {
             messages: [
               {
                 role: "system",
-                content: `당신은 다정하고 인간적인 정책자금 전문 상담사 '정책이'입니다. 마지막 발언의 의도를 먼저 살피세요. 짧은 답은 직전 질문에 연결하고, 정정하면 갱신하고, 설명을 원하면 먼저 답하세요. 추가 정보가 꼭 필요할 때만 한 가지를 물어보세요. 이미 확인된 정보(${knownSummary})는 중복해서 묻지 마세요. 현재 상태: ${diag.status}\n${evoContext}`,
+                content: `금전을 가리킬 때는 자금이라고 표현하세요. 당신은 다정하고 인간적인 정책자금 전문 상담사 '정책이'입니다. 마지막 발언의 의도를 먼저 살피세요. 짧은 답은 직전 질문에 연결하고, 정정하면 갱신하고, 설명을 원하면 먼저 답하세요. 추가 정보가 꼭 필요할 때만 한 가지를 물어보세요. 이미 확인된 정보(${knownSummary})는 중복해서 묻지 마세요. 현재 상태: ${diag.status}\n${evoContext}`,
               },
               ...historySnapshot.slice(-6).map((t) => ({
                 role: t.role === "assistant" ? "assistant" : "user",
@@ -642,7 +650,7 @@ export default function FundSeaExperience() {
         try {
           const res = await fetch(url, {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mode: "interview", engine: "ollama", message, answers: updated,
+            body: JSON.stringify({ mode: "interview", engine: "ollama", message, answers: {...updated, profile: undefined},
               history: messages.slice(-4).map(({ role, text }) => ({ role, text })) }),
             signal: AbortSignal.timeout(18000),
           });
@@ -816,6 +824,10 @@ export default function FundSeaExperience() {
       <main id="main-content" tabIndex={-1}>
         <section className="sea-hero" id="diagnosis">
           <FundingEntry onStart={start} busy={busy} onTopic={(prompt) => { openConsultation(false); void send(prompt); }} />
+          <CompanyProfileFields value={answers.profile || {}} onChange={profile => {
+            setAnswers(previous => ({ ...previous, profile, ...(profile.form ? {entity: /^(개인|공동)사업자$/.test(profile.form) ? "sole" : /법인/.test(profile.form) ? "corporation" : "unknown"} : {}) }));
+            setDiagnosisStarted(true); setSaved(false);
+          }}/>
           <BusinessBranchFields answers={answers.branch || {}} onChange={branch => { setAnswers(previous => ({ ...previous, branch })); setDiagnosisStarted(true); setSaved(false); }} />
           <div className="workspace-label"><span><i /> 정책이 상담실</span><p>대표님의 이야기가, 진단의 시작입니다.</p><span>무료 사전 진단</span></div>
           <div className="workspace" id="consultation" role="region" aria-label="자금 상담" tabIndex={-1}>
@@ -1160,7 +1172,15 @@ export default function FundSeaExperience() {
                 {result.branch.expert && <p>전문가 검토 필요 · 현재 자동 배정은 준비 중입니다.</p>}
                 <small>{result.branch.source}<br />{result.branch.notice}</small>
               </div>}
-              <ConsultationReport answers={answers} messages={messages} busy={busy} />
+              <ConsultationReport answers={answers} messages={messages} busy={busy} onRecheck={report => {
+                reset();
+                const profile = {...report.profile};
+                for (const key of ["year","auditYear","auditReport","audit","opinion","continuity","period","sales","debt","guarantee","filing","books","adjust"]) delete profile[key];
+                setAnswers({profile});
+                openConsultation(true);
+                setMessages([{id:"recheck-" + Date.now(),role:"assistant",source:"바른자금 기본 진단",time:nowTimeLabel(),
+                  text:"이번에는 현재 상황을 알려주세요. " + interviewReply({})}]);
+              }} />
               <button
                 className="save-button"
                 disabled={!messages.length && !result.branch}
@@ -1310,7 +1330,7 @@ export default function FundSeaExperience() {
                   <h3>{p.name}</h3>
                   <div className="plan-price">
                     {p.price}
-                    <span>원</span>
+                    <span>{p.tier === "BASIC" ? "원 / 년" : "원"}</span>
                   </div>
                   <p className="plan-sla">{p.sub}</p>
                   <div className="plan-line" />
@@ -1362,7 +1382,7 @@ export default function FundSeaExperience() {
           </section>
           <section id="partners" aria-labelledby="partners-title">
             <Building2 size={23} aria-hidden="true" />
-            <div><h2 id="partners-title">파트너사</h2>
+            <div><h2 id="partners-title">파트너사 · 정책자금 실행 파트너</h2><p>바른자금이 먼저 진단하고, 대표님이 원하는 경우 검증된 컨설턴트가 상담과 서류 준비를 돕습니다. 회원 보고서 보관함에서 파트너의 전문 분야와 비용을 확인한 뒤 공유에 동의할 수 있어요.</p>
               <p>운영사 제공 자료에 따르면 (사)한국중소상공인진흥협회 전문가 네트워크와 연계합니다. 재무·노무·특허·인증 등 분야별 검토가 필요한 경우 상담 범위를 먼저 확인합니다.</p>
             </div>
           </section>
@@ -1569,6 +1589,7 @@ export default function FundSeaExperience() {
                   ? "지금은 서류 없이 대화로 시작할 수 있어요. 파일 업로드와 공공 마이데이터 연결은 아직 제공되지 않습니다. 필요한 서류가 궁금하시면 정책이에게 물어보세요."
                   : modal === "개인정보 안내"
                   ? "대화 화면은 새로고침하면 초기화됩니다. 상담에서 추출한 기억과 선호 말투는 이 브라우저에 저장되어 다음 상담에 활용됩니다. AI 연결 시 입력 내용과 상담 기억이 해당 AI 제공자에게 전달됩니다. 상담 메모는 기기에 내려받을 수 있습니다."
+                  : modal === "연간 BASIC" ? "연 99,000원으로 설계한 상품입니다. 무료진단이나 19,000원 기본 리포트 후 이용하며, 검증된 맞춤공고와 분기 재진단을 제공합니다. 기본 리포트 제공 횟수와 할인은 출시 시 확정합니다. 59,000원 정밀전략 리포트와 실행컨설팅은 별도입니다. 현재 자동 알림과 결제는 준비 중입니다."
                   : modal === "서비스 이용 안내"
                   ? "현재는 질문은행과 AI(Gemma 4 / Gemini)를 결합한 대화형 사전 안내 버전입니다. 실시간 정책조회, 금융기관 접수 및 결제는 연결되어 있지 않습니다. 결과를 실제 신청에 활용하기 전 공식 공고와 기업 자료를 확인해야 합니다."
                   : `${modal}은 ${

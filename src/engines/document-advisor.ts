@@ -1,3 +1,4 @@
+import { CompanyProfile, profileAssessment } from "./company-profile";
 import { diagnoseBranch, BranchAnswers } from "./business-branches";
 import bank from "../data/master/question-bank.json";
 import rules from "../data/master/rules.json";
@@ -7,11 +8,11 @@ export const QUESTION_BANK = bank;
 export const POLICY_REFERENCES = rules.Institution_Rule_Index.slice(1).map(({ cells, row }) => ({ id: cells[0], institution: cells[1], subject: cells[2], criteria: cells[5], status: cells[6], date: cells[8], url: cells[9], note: cells[10], row }));
 export const PREFERENCE_REFERENCES = rules.Preferential_Factors.slice(1).map(({ cells }) => ({ id: cells[0], name: cells[2], evidence: cells[3], condition: cells[5], caution: cells[9] }));
 export type AnswerKey = "purpose" | "entity" | "operation" | "tax" | "overdue" | "credit" | "industry" | "ceo" | "related" | "finance" | "documents";
-export type Answers = Partial<Record<AnswerKey, string>> & { branch?: BranchAnswers };
+export type Answers = Partial<Record<AnswerKey, string>> & { profile?: CompanyProfile; branch?: BranchAnswers };
 export type Question = { key: AnswerKey; text: string; choices: { value: string; label: string }[] };
 const q = (key: AnswerKey, text: string, options: [string, string][]): Question => ({ key, text, choices: options.map(([value, label]) => ({ value, label })) });
 export const DIAGNOSIS_QUESTIONS: Question[] = [
-  q("purpose", "돈을 어디에 쓰실 예정이에요?", [["working", "운영비"], ["facility", "기계·시설 구입"], ["refinance", "대출 갈아타기"], ["unknown", "잘 모르겠어요"]]),
+  q("purpose", "자금을 어디에 쓰실 예정이에요?", [["working", "운영비"], ["facility", "기계·시설 구입"], ["refinance", "대출 갈아타기"], ["unknown", "잘 모르겠어요"]]),
   q("entity", "개인사업자세요, 법인사업자세요?", [["sole", "개인"], ["corporation", "법인"], ["prestartup", "창업 준비 중"]]),
   q("operation", "지금도 사업장을 운영하고 계세요?", [["active", "영업 중이에요"], ["dormant", "잠시 쉬고 있어요"], ["closed", "폐업했어요"]]),
   q("tax", "아직 못 낸 세금이 있나요?", [["none", "없어요"], ["exception", "나눠 내는 중이에요"], ["active", "있어요"], ["unknown", "잘 모르겠어요"]]),
@@ -178,16 +179,22 @@ export function summarizeKnownFacts(answers: Answers): string {
 export function freeDiagnosis(answers: Answers) {
   const missing = DIAGNOSIS_QUESTIONS.filter(q => !answers[q.key] || answers[q.key] === "unknown").map(q => q.text);
   const blocked = answers.tax === "active" || answers.overdue === "active" || answers.operation === "closed" || answers.operation === "dormant" || answers.industry === "excluded";
-  const branch = diagnoseBranch(answers.branch ? { ...answers.branch, recovery: answers.finance === "weak" ? "지속적 영업적자" : answers.branch.recovery } : {}, blocked || answers.credit === "review");
+  const profile = answers.profile || {};
+  const assessment = profileAssessment(profile);
+  const sector = /영농|농업회사/.test(profile.form || "") ? "농업·농식품" : /영어조합|어업회사/.test(profile.form || "") ? "어업·수산" : undefined;
+  const branchInputs = { ...answers.branch, businessType: sector || answers.branch?.businessType };
+  const initialBranch = diagnoseBranch({ ...branchInputs, recovery: answers.finance === "weak" ? "지속적 영업적자" : answers.branch?.recovery }, blocked || answers.credit === "review");
+  const branch = assessment.hold ? { stage: "신청주체·증빙 전문가 확인", hold: true, expert: true, routes: [] as string[], missing: initialBranch?.missing || [],
+    reason: assessment.notes.join(" "), action: "등록·회계 자료를 확인한 뒤 다시 진단하세요.", notice: "사용자 입력 기준 사전 검토", source: "추가설계서 v5.3·v5.4" } : initialBranch;
   const structure = answers.finance === "weak" || Boolean(branch?.hold);
   const exceptional = answers.tax === "exception" || answers.overdue === "cleared" || answers.credit === "review" || answers.ceo === "review" || answers.related === "yes" || answers.entity === "prestartup" || answers.documents === "missing";
   const status = blocked ? "현재 곤란" : missing.length || exceptional || structure ? "추가 확인" : "검토 가능";
-  const reasons: string[] = [];
+  const reasons: string[] = [...assessment.notes];
   if (blocked) reasons.push("현재 응답에 제한 요인이 있어 일반 자금 신청 전 해소·예외 여부를 확인해야 합니다.");
   if (answers.tax === "exception") reasons.push("분납·유예·완납예정은 즉시 종결하지 않고 기관별 예외요건을 확인합니다.");
   if (answers.ceo === "review") reasons.push("공동·가족경영 관계와 실제 경영 참여 방식을 추가 확인합니다.");
   if (answers.related === "yes") reasons.push("다른 사업체 채무는 대상기업 부채에 단순 합산하지 않고 사업체·기관별로 분리합니다.");
-  if (structure) reasons.push("자본잠식·영업적자 등 재무취약 상태는 신규 차입금액 제시보다 현금흐름·구조개선 검토를 우선합니다.");
+  if (answers.finance === "weak" || initialBranch?.hold) reasons.push("자본잠식·영업적자 등 재무취약 상태는 신규 차입금액 제시보다 현금흐름·구조개선 검토를 우선합니다.");
   if (answers.documents === "missing") reasons.push("자동조회 장애·자료 누락은 진단 중단 대신 누락 자료만 대체 제출합니다.");
   if (!reasons.length) reasons.push(missing.length ? "아직 확인하지 않은 핵심 정보가 있습니다." : "응답 기준 기본 제한요인이 확인되지 않았습니다. 증빙·최신 공고 검증은 별도로 필요합니다.");
   const direction = blocked || structure ? "제한요인 해소·재기 또는 구조개선 경로 검토" : answers.purpose === "facility" ? "시설자금 방향 — 투자견적·자기자금·설치 주소 확인" : answers.purpose === "refinance" ? "대환 전용 공고 여부와 기존 대출 조건 확인" : "운전자금 방향 — 업종·규모·금융잔액 확인";
@@ -286,7 +293,7 @@ export function conversationReply(query: string, answers: Answers, history: Conv
     return `알겠어요. 자금 용도는 ${purpose} 쪽으로 바로잡았어요. ${formatHumanFollowUpQuestion(answers)}`;
   if (/^(왜요|그건 왜|왜 물어봐요|왜 물어보세요|왜 궁금해요)$/.test(words)) {
     if (/체납|국세|지방세/.test(previous)) return "세금 납부 상태에 따라 먼저 확인할 공고 조건이나 준비 서류가 달라질 수 있어서 여쭤봤어요. 지금 정확히 모르시면 나중에 확인해도 괜찮아요.";
-    if (/월세|운영비|기계|용도/.test(previous)) return "돈을 어디에 쓰실지 알면 필요한 서류를 좁힐 수 있어서예요. 예를 들어 기계를 살 때는 견적서를, 운영비를 마련할 때는 매출이나 지출 자료를 먼저 살펴봐요.";
+    if (/월세|운영비|기계|용도/.test(previous)) return "자금을 어디에 쓰실지 알면 필요한 서류를 좁힐 수 있어서예요. 예를 들어 기계를 살 때는 견적서를, 운영비를 마련할 때는 매출이나 지출 자료를 먼저 살펴봐요.";
   }
   const deadline = words.match(/(?:오늘|내일|모레|이번\s*주|다음\s*주|이달\s*말|이번\s*달\s*말)(?:\s*[월화수목금토일]요일)?|(?:\d{1,2}월\s*)?\d{1,2}일/);
   if (deadline && /날짜|언제까지|지급일/.test(previous) && !/[?？]/.test(query))
@@ -296,12 +303,12 @@ export function conversationReply(query: string, answers: Answers, history: Conv
     return `필요한 금액은 ${amount[0]} 정도군요. ${purpose ? purpose + "에 쓰실 금액으로 보고 이어갈게요." : "어디에 쓰실지에 따라 살펴볼 방향이 달라져요."} ${formatHumanFollowUpQuestion(answers)}`;
   if (/쉽게|무슨 뜻|무슨 말|뜻이 뭐/.test(words)) {
     const topic = /운전자금|시설자금|대환/.test(words) ? words : previous;
-    if (/운전자금/.test(topic)) return "운전자금은 사업을 계속 돌리는 데 쓰는 돈이에요. 가게라면 이번 달 월세, 직원 급여, 재료를 살 돈이 여기에 들어가요.";
-    if (/시설자금/.test(topic)) return "시설자금은 오래 쓸 장비나 시설을 갖추는 데 드는 돈이에요. 빵집에서 오븐을 새로 사는 비용을 떠올리시면 돼요.";
+    if (/운전자금/.test(topic)) return "운전자금은 사업을 계속 돌리는 데 쓰는 자금이에요. 가게라면 이번 달 월세, 직원 급여, 재료 구입 자금이 여기에 들어가요.";
+    if (/시설자금/.test(topic)) return "시설자금은 오래 쓸 장비나 시설을 갖추는 데 드는 자금이에요. 빵집에서 오븐을 새로 사는 비용을 떠올리시면 돼요.";
     if (/대환/.test(topic)) return "대환은 새 대출로 기존 대출을 갚는 거예요. 이자와 수수료를 같이 살펴봐야 실제 부담이 줄어드는지 알 수 있어요.";
   }
   if (/^(너무 |조금 |좀 )?(막막해요?|답답해요?|걱정돼요?|무서워요|힘들어요)$/.test(words))
-    return purpose ? `${purpose} 문제로 마음이 무거우시군요. 지금 가장 부담되는 건 필요한 금액인가요, 돈을 마련해야 하는 날짜인가요?` : "막막할 때는 어디서부터 말해야 할지도 어렵죠. 지금 가장 마음에 걸리는 일 하나만 들려주실래요?";
+    return purpose ? `${purpose} 문제로 마음이 무거우시군요. 지금 가장 부담되는 건 필요한 금액인가요, 자금을 마련해야 하는 날짜인가요?` : "막막할 때는 어디서부터 말해야 할지도 어렵죠. 지금 가장 마음에 걸리는 일 하나만 들려주실래요?";
   return undefined;
 }
 
@@ -399,4 +406,8 @@ export function reportReadiness(tier: "L1" | "L2" | "L3", dataReady: boolean, po
   if (!dataReady || !policyVerified) return { status: "NEEDS_EVIDENCE", showAmount: false };
   if (tier === "L3" && !expertReviewed) return { status: "EXPERT_REVIEW_PENDING", showAmount: false };
   return { status: "READY_FOR_REPORT", showAmount: true };
+}
+
+export function consultationWording(text: string): string {
+  return text.replace(/(?<![가-힣A-Za-z0-9])돈(?=(?:으로|처럼|까지|부터|이라|이에|이었|이|을|은|도|만|에|과)?(?:[\s.,!?…)"'”]|$))/gu, "자금");
 }
