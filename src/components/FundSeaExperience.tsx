@@ -887,7 +887,7 @@ export default function FundSeaExperience() {
                     style={{
                       width: "auto",
                       padding: "0 10px",
-                      fontSize: "11px",
+                      fontSize: "var(--type-caption)",
                       fontWeight: 700,
                     }}
                   >
@@ -922,7 +922,7 @@ export default function FundSeaExperience() {
                   role="status"
                   style={{
                     padding: "7px 18px",
-                    fontSize: "11px",
+                    fontSize: "var(--type-caption)",
                     fontWeight: 700,
                     background: "rgba(21, 126, 132, 0.16)",
                     color: "#72d5ca",
@@ -1013,9 +1013,9 @@ export default function FundSeaExperience() {
                                   border: 0,
                                   background: "transparent",
                                   color: "inherit",
-                                  fontSize: "10px",
+                                  fontSize: "var(--type-caption)",
                                   padding: 0,
-                                  opacity: 0.75,
+                                  minHeight: "24px",
                                 }}
                               >
                                 👍 공감돼요
@@ -1507,7 +1507,7 @@ export default function FundSeaExperience() {
             </span>
             <h2 id="modal-title">{modal}</h2>
             {modal === "정책이 학습노트" ? (
-              <div style={{ display: "grid", gap: "12px", fontSize: "12px" }}>
+              <div style={{ display: "grid", gap: "12px", fontSize: "var(--type-label)" }}>
                 <div
                   style={{
                     padding: "12px",
@@ -1516,7 +1516,7 @@ export default function FundSeaExperience() {
                     border: "1px solid rgba(72, 196, 193, 0.3)",
                   }}
                 >
-                  <div style={{ fontWeight: 800, fontSize: "13px" }}>
+                  <div style={{ fontWeight: 800, fontSize: "var(--type-label)" }}>
                     Lv.{evolution.level} {evolution.stageTitle} (EXP{" "}
                     {evolution.exp}/{evolution.nextLevelExp})
                   </div>
@@ -1542,11 +1542,11 @@ export default function FundSeaExperience() {
                         padding: "8px 10px",
                         borderRadius: "9px",
                         border: "1px solid rgba(139, 185, 183, 0.25)",
-                        fontSize: "11px",
+                        fontSize: "var(--type-caption)",
                       }}
                     >
                       <strong>• {fact.summary}</strong>{" "}
-                      <span style={{ opacity: 0.65, fontSize: "10px" }}>
+                      <span style={{ opacity: 0.65, fontSize: "var(--type-caption)" }}>
                         ({fact.learnedAt})
                       </span>
                     </div>
@@ -1589,7 +1589,7 @@ export default function FundSeaExperience() {
                       border: "1px solid rgba(139, 185, 183, 0.35)",
                       background: "transparent",
                       color: "inherit",
-                      fontSize: "12px",
+                      fontSize: "var(--type-label)",
                     }}
                   />
                   <button
@@ -1600,7 +1600,7 @@ export default function FundSeaExperience() {
                       border: 0,
                       background: "#16868b",
                       color: "#fff",
-                      fontSize: "11px",
+                      fontSize: "var(--type-caption)",
                       fontWeight: 700,
                     }}
                   >

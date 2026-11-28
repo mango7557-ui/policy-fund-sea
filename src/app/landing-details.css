@@ -19,7 +19,7 @@
 .casebook-intro p, .publication-panels p {
   color: var(--editor-muted);
   line-height: 1.8;
-  font-size: 15px;
+  font-size: var(--type-body);
   margin: 0;
 }
 
@@ -27,7 +27,7 @@
   display: block;
   margin-top: 24px;
   color: var(--editor-muted);
-  font-size: 12px;
+  font-size: var(--type-label);
   line-height: 1.7;
 }
 
@@ -43,7 +43,7 @@
   list-style: none;
 }
 .casebook-entry summary::-webkit-details-marker { display: none; }
-.casebook-category { color: var(--accent); font-size: 13px; font-weight: 650; }
+.casebook-category { color: var(--accent); font-size: var(--type-label); font-weight: 650; }
 .casebook-title { font-size: clamp(16px, 1.35vw, 19px); font-weight: 650; letter-spacing: -.035em; }
 .casebook-entry summary svg { color: var(--editor-muted); }
 .casebook-entry[open] summary svg { transform: rotate(180deg); }
@@ -54,7 +54,7 @@
   margin-bottom: 16px;
   border-inline-start: 3px solid var(--accent);
 }
-.casebook-answer dl { display: grid; grid-template-columns: 4.5em 1fr; gap: 10px 12px; margin: 0; font-size: 14px; line-height: 1.8; }
+.casebook-answer dl { display: grid; grid-template-columns: 4.5em 1fr; gap: 10px 12px; margin: 0; font-size: var(--type-body); line-height: 1.8; }
 .casebook-answer dt { font-weight: 650; }
 .casebook-answer dd { margin: 0; color: var(--editor-muted); }
 .casebook-answer button {
@@ -89,13 +89,13 @@
 }
 .publication-panels svg { flex-shrink: 0; color: var(--accent); margin-top: 3px; }
 .publication-panels h2 { color: var(--editor-ink); font-size: 21px; line-height: 1.4; letter-spacing: -.04em; margin: 0 0 10px; }
-.publication-panels p { font-size: 14px; }
+.publication-panels p { font-size: var(--type-body); }
 
 html[data-theme] .plans-section .plan-card,
 html[data-theme] .plans-section .plan-card:not(.featured) { padding: clamp(24px, 3vw, 38px) !important; }
 .plan-card.featured .plan-tag { color: var(--accent) !important; }
 .faq-list p[hidden] { display: none !important; }
-.chat-mode-label { padding: 3px 6px; border: 1px solid var(--editor-line); border-radius: 4px; color: var(--editor-muted); font-size: 11px; white-space: nowrap; }
+.chat-mode-label { padding: 3px 6px; border: 1px solid var(--editor-line); border-radius: 4px; color: var(--editor-muted); font-size: var(--type-caption); white-space: nowrap; }
 
 @media (max-width: 780px) {
   .casebook.section-shell, .publication-panels { grid-template-columns: minmax(0, 1fr); }
@@ -112,10 +112,10 @@ html[data-theme] .plans-section .plan-card:not(.featured) { padding: clamp(24px,
   .casebook-answer dd + dt { margin-top: 8px; }
 }
 
-.branch-result {font-size:13px; line-height:1.8; padding:18px 0; border-top:1px solid #a7c2d2; overflow-wrap:anywhere;}
+.branch-result {font-size:var(--type-label); line-height:1.8; padding:18px 0; border-top:1px solid #a7c2d2; overflow-wrap:anywhere;}
 .branch-result h3 {font-size:18px; margin:0 0 10px;}
 .branch-result ul {padding-left:18px;}
-.branch-result small {display:block; font-size:11px;}
+.branch-result small {display:block; font-size:var(--type-caption);}
 
 .consultation-report-dialog {width:min(820px,calc(100vw - 32px));max-height:90dvh;padding:28px;border:1px solid #d6e0e8;border-radius:14px;background:white;color:#102b55;overflow:auto;line-height:1.8;}
 .consultation-report-dialog::backdrop {background:#102b5580;}
@@ -135,3 +135,27 @@ html[data-theme] .plans-section .plan-card:not(.featured) { padding: clamp(24px,
 
 .consultation-report-dialog label{display:block;margin:16px 0}.consultation-report-dialog input:not([type=checkbox]){display:block;width:100%;padding:12px;border:1px solid #d6e0e8;border-radius:6px;}
 @media print{.consultation-report-dialog .save-button,.consultation-report-dialog dialog{display:none!important;}}
+
+.sea-message .bubble-row > p, .sea-composer :is(input, textarea) {
+  font-size: var(--type-body);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+html[data-theme] .bubble-meta, html[data-theme] .composer-note {
+  color: var(--editor-muted);
+}
+@media (max-width: 600px) {
+  .sea-message .bubble-row { flex-wrap: wrap; }
+  .sea-message .bubble-meta { flex-direction: row; align-items: center; gap: .5em; }
+  .sea-message .bubble-meta.user-meta { order: 1; }
+}
+
+.bf-header :is(a, button):focus-visible,
+.composer-wrap :is(button, textarea, input):focus-visible {
+  outline: 3px solid var(--editor-ink);
+  outline-offset: 2px;
+}
+.bf-topic-text, .bf-credentials p, .sea-message .bubble-row > p {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
